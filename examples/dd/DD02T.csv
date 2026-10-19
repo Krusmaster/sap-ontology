@@ -1,0 +1,9 @@
+TABNAME,DDLANGUAGE,DDTEXT
+VBAK,E,Sales Document: Header Data
+VBAP,E,Sales Document: Item Data
+VBEP,E,Sales Document: Schedule Line Data
+KNA1,E,General Data in Customer Master
+MARA,E,General Material Data
+EKKO,E,Purchasing Document Header
+EKPO,E,Purchasing Document Item
+LFA1,E,Vendor Master (General Section)

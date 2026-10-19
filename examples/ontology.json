@@ -1,0 +1,133 @@
+{
+  "displayName": "SAP Sales & Purchasing",
+  "type": "Ontology",
+  "definition": {
+    "parts": [
+      {
+        "path": ".platform",
+        "payload": "eyIkc2NoZW1hIjoiaHR0cHM6Ly9kZXZlbG9wZXIubWljcm9zb2Z0LmNvbS9qc29uLXNjaGVtYXMvZmFicmljL2dpdEludGVncmF0aW9uL3BsYXRmb3JtUHJvcGVydGllcy8yLjAuMC9zY2hlbWEuanNvbiIsIm1ldGFkYXRhIjp7InR5cGUiOiJPbnRvbG9neSIsImRpc3BsYXlOYW1lIjoiU0FQIFNhbGVzICYgUHVyY2hhc2luZyJ9LCJjb25maWciOnsidmVyc2lvbiI6IjIuMCIsImxvZ2ljYWxJZCI6Ijg4NDlhMTQzLWI3YTgtNTA3MS05ZDU0LTM1NWE4NjMyNTQ4YSJ9fQ==",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "definition.json",
+        "payload": "e30=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/8796841386711286359/definition.json",
+        "payload": "eyJpZCI6ODc5Njg0MTM4NjcxMTI4NjM1OSwibmFtZSI6IkVLS08iLCJuYW1lc3BhY2UiOiJzYXAiLCJkZXNjcmlwdGlvbiI6IlB1cmNoYXNpbmcgRG9jdW1lbnQgSGVhZGVyIiwia2V5UHJvcGVydHlJZHMiOls0NDE0Mzk3MjcxODIzMTI1MTA2XSwiZGlzcGxheU5hbWVQcm9wZXJ0eUlkIjo0NDE0Mzk3MjcxODIzMTI1MTA2LCJwcm9wZXJ0aWVzIjpbeyJpZCI6NDQxNDM5NzI3MTgyMzEyNTEwNiwibmFtZSI6IkVCRUxOIiwidmFsdWVUeXBlIjoiU3RyaW5nIn0seyJpZCI6NzE4NDUwNjYwNzI5MDY2NzYxOCwibmFtZSI6IkxJRk5SIiwidmFsdWVUeXBlIjoiU3RyaW5nIn1dLCJ0aW1lc2VyaWVzUHJvcGVydGllcyI6W119",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/8796841386711286359/DataBindings/fbb93adc-6fa2-56f0-871f-80b00c0f5075.json",
+        "payload": "eyJkYXRhQmluZGluZ1R5cGUiOiJOb25UaW1lU2VyaWVzIiwic291cmNlIjp7InR5cGUiOiJMYWtlaG91c2VUYWJsZSIsIndvcmtzcGFjZUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwiaXRlbUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyIiwic291cmNlU2NoZW1hIjoiZGJvIiwic291cmNlVGFibGVOYW1lIjoiZWtrbyJ9LCJwcm9wZXJ0eUJpbmRpbmdzIjpbeyJwcm9wZXJ0eUlkIjo0NDE0Mzk3MjcxODIzMTI1MTA2LCJzb3VyY2VDb2x1bW5OYW1lIjoiRUJFTE4ifSx7InByb3BlcnR5SWQiOjcxODQ1MDY2MDcyOTA2Njc2MTgsInNvdXJjZUNvbHVtbk5hbWUiOiJMSUZOUiJ9XX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/7365160845817457682/definition.json",
+        "payload": "eyJpZCI6NzM2NTE2MDg0NTgxNzQ1NzY4MiwibmFtZSI6IkVLUE8iLCJuYW1lc3BhY2UiOiJzYXAiLCJkZXNjcmlwdGlvbiI6IlB1cmNoYXNpbmcgRG9jdW1lbnQgSXRlbSIsImtleVByb3BlcnR5SWRzIjpbMzIwODgxNDQxMTc4ODA4ODk4MCw5MDIzOTgwNzAzNDU3MDA2OTcyXSwiZGlzcGxheU5hbWVQcm9wZXJ0eUlkIjo5MDIzOTgwNzAzNDU3MDA2OTcyLCJwcm9wZXJ0aWVzIjpbeyJpZCI6MzIwODgxNDQxMTc4ODA4ODk4MCwibmFtZSI6IkVCRUxOIiwidmFsdWVUeXBlIjoiU3RyaW5nIn0seyJpZCI6OTAyMzk4MDcwMzQ1NzAwNjk3MiwibmFtZSI6IkVCRUxQIiwidmFsdWVUeXBlIjoiU3RyaW5nIn0seyJpZCI6ODgyODcyMDk3ODQ2NDI2NjY2OSwibmFtZSI6Ik1BVE5SIiwidmFsdWVUeXBlIjoiU3RyaW5nIn0seyJpZCI6MzUwODUxNjEzMzcxOTcwODA2MSwibmFtZSI6Ik1FTkdFIiwidmFsdWVUeXBlIjoiRG91YmxlIn1dLCJ0aW1lc2VyaWVzUHJvcGVydGllcyI6W119",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/7365160845817457682/DataBindings/2aa504ec-5e24-52df-88f9-618c45400e9c.json",
+        "payload": "eyJkYXRhQmluZGluZ1R5cGUiOiJOb25UaW1lU2VyaWVzIiwic291cmNlIjp7InR5cGUiOiJMYWtlaG91c2VUYWJsZSIsIndvcmtzcGFjZUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwiaXRlbUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyIiwic291cmNlU2NoZW1hIjoiZGJvIiwic291cmNlVGFibGVOYW1lIjoiZWtwbyJ9LCJwcm9wZXJ0eUJpbmRpbmdzIjpbeyJwcm9wZXJ0eUlkIjozMjA4ODE0NDExNzg4MDg4OTgwLCJzb3VyY2VDb2x1bW5OYW1lIjoiRUJFTE4ifSx7InByb3BlcnR5SWQiOjkwMjM5ODA3MDM0NTcwMDY5NzIsInNvdXJjZUNvbHVtbk5hbWUiOiJFQkVMUCJ9LHsicHJvcGVydHlJZCI6ODgyODcyMDk3ODQ2NDI2NjY2OSwic291cmNlQ29sdW1uTmFtZSI6Ik1BVE5SIn0seyJwcm9wZXJ0eUlkIjozNTA4NTE2MTMzNzE5NzA4MDYxLCJzb3VyY2VDb2x1bW5OYW1lIjoiTUVOR0UifV19",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/5838987819984134857/definition.json",
+        "payload": "eyJpZCI6NTgzODk4NzgxOTk4NDEzNDg1NywibmFtZSI6IktOQTEiLCJuYW1lc3BhY2UiOiJzYXAiLCJkZXNjcmlwdGlvbiI6IkdlbmVyYWwgRGF0YSBpbiBDdXN0b21lciBNYXN0ZXIiLCJrZXlQcm9wZXJ0eUlkcyI6WzM5MjI3NTI3Mjc1MjY0NzMyOF0sImRpc3BsYXlOYW1lUHJvcGVydHlJZCI6MzkyMjc1MjcyNzUyNjQ3MzI4LCJwcm9wZXJ0aWVzIjpbeyJpZCI6MzkyMjc1MjcyNzUyNjQ3MzI4LCJuYW1lIjoiS1VOTlIiLCJ2YWx1ZVR5cGUiOiJTdHJpbmcifSx7ImlkIjoyNzIyMzYyOTA5ODU3Mzk5NjEzLCJuYW1lIjoiTkFNRTEiLCJ2YWx1ZVR5cGUiOiJTdHJpbmcifV0sInRpbWVzZXJpZXNQcm9wZXJ0aWVzIjpbXX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/5838987819984134857/DataBindings/97d4c650-5829-5a6b-8af1-52d4fc9c778b.json",
+        "payload": "eyJkYXRhQmluZGluZ1R5cGUiOiJOb25UaW1lU2VyaWVzIiwic291cmNlIjp7InR5cGUiOiJMYWtlaG91c2VUYWJsZSIsIndvcmtzcGFjZUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwiaXRlbUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyIiwic291cmNlU2NoZW1hIjoiZGJvIiwic291cmNlVGFibGVOYW1lIjoia25hMSJ9LCJwcm9wZXJ0eUJpbmRpbmdzIjpbeyJwcm9wZXJ0eUlkIjozOTIyNzUyNzI3NTI2NDczMjgsInNvdXJjZUNvbHVtbk5hbWUiOiJLVU5OUiJ9LHsicHJvcGVydHlJZCI6MjcyMjM2MjkwOTg1NzM5OTYxMywic291cmNlQ29sdW1uTmFtZSI6Ik5BTUUxIn1dfQ==",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/3865543610211922620/definition.json",
+        "payload": "eyJpZCI6Mzg2NTU0MzYxMDIxMTkyMjYyMCwibmFtZSI6IkxGQTEiLCJuYW1lc3BhY2UiOiJzYXAiLCJkZXNjcmlwdGlvbiI6IlZlbmRvciBNYXN0ZXIgKEdlbmVyYWwgU2VjdGlvbikiLCJrZXlQcm9wZXJ0eUlkcyI6WzQ0MTcxNzgwMjg1OTk2MTEzNF0sImRpc3BsYXlOYW1lUHJvcGVydHlJZCI6NDQxNzE3ODAyODU5OTYxMTM0LCJwcm9wZXJ0aWVzIjpbeyJpZCI6NDQxNzE3ODAyODU5OTYxMTM0LCJuYW1lIjoiTElGTlIiLCJ2YWx1ZVR5cGUiOiJTdHJpbmcifSx7ImlkIjo3NTkxMjIxMjYzMzUzMjE4NTQ3LCJuYW1lIjoiTkFNRTEiLCJ2YWx1ZVR5cGUiOiJTdHJpbmcifV0sInRpbWVzZXJpZXNQcm9wZXJ0aWVzIjpbXX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/3865543610211922620/DataBindings/15c1d55c-6ae4-5707-b7b8-0eee54e1f066.json",
+        "payload": "eyJkYXRhQmluZGluZ1R5cGUiOiJOb25UaW1lU2VyaWVzIiwic291cmNlIjp7InR5cGUiOiJMYWtlaG91c2VUYWJsZSIsIndvcmtzcGFjZUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwiaXRlbUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyIiwic291cmNlU2NoZW1hIjoiZGJvIiwic291cmNlVGFibGVOYW1lIjoibGZhMSJ9LCJwcm9wZXJ0eUJpbmRpbmdzIjpbeyJwcm9wZXJ0eUlkIjo0NDE3MTc4MDI4NTk5NjExMzQsInNvdXJjZUNvbHVtbk5hbWUiOiJMSUZOUiJ9LHsicHJvcGVydHlJZCI6NzU5MTIyMTI2MzM1MzIxODU0Nywic291cmNlQ29sdW1uTmFtZSI6Ik5BTUUxIn1dfQ==",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/8510024950544870581/definition.json",
+        "payload": "eyJpZCI6ODUxMDAyNDk1MDU0NDg3MDU4MSwibmFtZSI6Ik1BUkEiLCJuYW1lc3BhY2UiOiJzYXAiLCJkZXNjcmlwdGlvbiI6IkdlbmVyYWwgTWF0ZXJpYWwgRGF0YSIsImtleVByb3BlcnR5SWRzIjpbNTQ1MzA4MTMxNjA4NDU1Mzk2M10sImRpc3BsYXlOYW1lUHJvcGVydHlJZCI6NTQ1MzA4MTMxNjA4NDU1Mzk2MywicHJvcGVydGllcyI6W3siaWQiOjU0NTMwODEzMTYwODQ1NTM5NjMsIm5hbWUiOiJNQVROUiIsInZhbHVlVHlwZSI6IlN0cmluZyJ9LHsiaWQiOjU2MjI5ODcxMDkzOTQ1MzcxMSwibmFtZSI6Ik1UQVJUIiwidmFsdWVUeXBlIjoiU3RyaW5nIn1dLCJ0aW1lc2VyaWVzUHJvcGVydGllcyI6W119",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/8510024950544870581/DataBindings/401d9d5c-98c8-597b-af3e-c550e617b5ef.json",
+        "payload": "eyJkYXRhQmluZGluZ1R5cGUiOiJOb25UaW1lU2VyaWVzIiwic291cmNlIjp7InR5cGUiOiJMYWtlaG91c2VUYWJsZSIsIndvcmtzcGFjZUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwiaXRlbUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyIiwic291cmNlU2NoZW1hIjoiZGJvIiwic291cmNlVGFibGVOYW1lIjoibWFyYSJ9LCJwcm9wZXJ0eUJpbmRpbmdzIjpbeyJwcm9wZXJ0eUlkIjo1NDUzMDgxMzE2MDg0NTUzOTYzLCJzb3VyY2VDb2x1bW5OYW1lIjoiTUFUTlIifSx7InByb3BlcnR5SWQiOjU2MjI5ODcxMDkzOTQ1MzcxMSwic291cmNlQ29sdW1uTmFtZSI6Ik1UQVJUIn1dfQ==",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/144936619292994169/definition.json",
+        "payload": "eyJpZCI6MTQ0OTM2NjE5MjkyOTk0MTY5LCJuYW1lIjoiVkJBSyIsIm5hbWVzcGFjZSI6InNhcCIsImRlc2NyaXB0aW9uIjoiU2FsZXMgRG9jdW1lbnQ6IEhlYWRlciBEYXRhIiwia2V5UHJvcGVydHlJZHMiOls5NTk2ODc3MTMzMTY2NjY3NTNdLCJkaXNwbGF5TmFtZVByb3BlcnR5SWQiOjk1OTY4NzcxMzMxNjY2Njc1MywicHJvcGVydGllcyI6W3siaWQiOjk1OTY4NzcxMzMxNjY2Njc1MywibmFtZSI6IlZCRUxOIiwidmFsdWVUeXBlIjoiU3RyaW5nIn0seyJpZCI6ODcxMjQxODU3NzA5MjM0NTk3OCwibmFtZSI6IkVSREFUIiwidmFsdWVUeXBlIjoiU3RyaW5nIn0seyJpZCI6NzExNDE2MTYyNDEyMzc1OTM0MSwibmFtZSI6IktVTk5SIiwidmFsdWVUeXBlIjoiU3RyaW5nIn0seyJpZCI6ODk3NjI0NDIwODg2NjUzMjg3MywibmFtZSI6Ik5FVFdSIiwidmFsdWVUeXBlIjoiRG91YmxlIn1dLCJ0aW1lc2VyaWVzUHJvcGVydGllcyI6W119",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/144936619292994169/DataBindings/de9ebc44-a81d-5627-b345-580ea3506cc8.json",
+        "payload": "eyJkYXRhQmluZGluZ1R5cGUiOiJOb25UaW1lU2VyaWVzIiwic291cmNlIjp7InR5cGUiOiJMYWtlaG91c2VUYWJsZSIsIndvcmtzcGFjZUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwiaXRlbUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyIiwic291cmNlU2NoZW1hIjoiZGJvIiwic291cmNlVGFibGVOYW1lIjoidmJhayJ9LCJwcm9wZXJ0eUJpbmRpbmdzIjpbeyJwcm9wZXJ0eUlkIjo5NTk2ODc3MTMzMTY2NjY3NTMsInNvdXJjZUNvbHVtbk5hbWUiOiJWQkVMTiJ9LHsicHJvcGVydHlJZCI6ODcxMjQxODU3NzA5MjM0NTk3OCwic291cmNlQ29sdW1uTmFtZSI6IkVSREFUIn0seyJwcm9wZXJ0eUlkIjo3MTE0MTYxNjI0MTIzNzU5MzQxLCJzb3VyY2VDb2x1bW5OYW1lIjoiS1VOTlIifSx7InByb3BlcnR5SWQiOjg5NzYyNDQyMDg4NjY1MzI4NzMsInNvdXJjZUNvbHVtbk5hbWUiOiJORVRXUiJ9XX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/2704018745549818013/definition.json",
+        "payload": "eyJpZCI6MjcwNDAxODc0NTU0OTgxODAxMywibmFtZSI6IlZCQVAiLCJuYW1lc3BhY2UiOiJzYXAiLCJkZXNjcmlwdGlvbiI6IlNhbGVzIERvY3VtZW50OiBJdGVtIERhdGEiLCJrZXlQcm9wZXJ0eUlkcyI6WzQxMDQ3ODE0NzMwMjE5MzMzMzIsNTY5MDczNTAwMDAwNzgwNzM0OV0sImRpc3BsYXlOYW1lUHJvcGVydHlJZCI6NTY5MDczNTAwMDAwNzgwNzM0OSwicHJvcGVydGllcyI6W3siaWQiOjQxMDQ3ODE0NzMwMjE5MzMzMzIsIm5hbWUiOiJWQkVMTiIsInZhbHVlVHlwZSI6IlN0cmluZyJ9LHsiaWQiOjU2OTA3MzUwMDAwMDc4MDczNDksIm5hbWUiOiJQT1NOUiIsInZhbHVlVHlwZSI6IlN0cmluZyJ9LHsiaWQiOjE2OTQ0NjQ0NTc3ODU3NDk4NDIsIm5hbWUiOiJNQVROUiIsInZhbHVlVHlwZSI6IlN0cmluZyJ9LHsiaWQiOjg5MjExMDc1NTMyMjk0OTMwNjUsIm5hbWUiOiJLV01FTkciLCJ2YWx1ZVR5cGUiOiJEb3VibGUifV0sInRpbWVzZXJpZXNQcm9wZXJ0aWVzIjpbXX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/2704018745549818013/DataBindings/2f59360f-04c6-58cc-9fed-3a80ba84b7e9.json",
+        "payload": "eyJkYXRhQmluZGluZ1R5cGUiOiJOb25UaW1lU2VyaWVzIiwic291cmNlIjp7InR5cGUiOiJMYWtlaG91c2VUYWJsZSIsIndvcmtzcGFjZUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwiaXRlbUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyIiwic291cmNlU2NoZW1hIjoiZGJvIiwic291cmNlVGFibGVOYW1lIjoidmJhcCJ9LCJwcm9wZXJ0eUJpbmRpbmdzIjpbeyJwcm9wZXJ0eUlkIjo0MTA0NzgxNDczMDIxOTMzMzMyLCJzb3VyY2VDb2x1bW5OYW1lIjoiVkJFTE4ifSx7InByb3BlcnR5SWQiOjU2OTA3MzUwMDAwMDc4MDczNDksInNvdXJjZUNvbHVtbk5hbWUiOiJQT1NOUiJ9LHsicHJvcGVydHlJZCI6MTY5NDQ2NDQ1Nzc4NTc0OTg0Miwic291cmNlQ29sdW1uTmFtZSI6Ik1BVE5SIn0seyJwcm9wZXJ0eUlkIjo4OTIxMTA3NTUzMjI5NDkzMDY1LCJzb3VyY2VDb2x1bW5OYW1lIjoiS1dNRU5HIn1dfQ==",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/4609145159460188831/definition.json",
+        "payload": "eyJpZCI6NDYwOTE0NTE1OTQ2MDE4ODgzMSwibmFtZSI6IlZCRVAiLCJuYW1lc3BhY2UiOiJzYXAiLCJkZXNjcmlwdGlvbiI6IlNhbGVzIERvY3VtZW50OiBTY2hlZHVsZSBMaW5lIERhdGEiLCJrZXlQcm9wZXJ0eUlkcyI6WzM1MzI3ODQzODM2MzkxOTY3ODUsMTc5Njc4NjMyMjMwMzc2MjMzOSw2ODc1MzI3MTUwNzM4Mjk2NTM1XSwiZGlzcGxheU5hbWVQcm9wZXJ0eUlkIjo2ODc1MzI3MTUwNzM4Mjk2NTM1LCJwcm9wZXJ0aWVzIjpbeyJpZCI6MzUzMjc4NDM4MzYzOTE5Njc4NSwibmFtZSI6IlZCRUxOIiwidmFsdWVUeXBlIjoiU3RyaW5nIn0seyJpZCI6MTc5Njc4NjMyMjMwMzc2MjMzOSwibmFtZSI6IlBPU05SIiwidmFsdWVUeXBlIjoiU3RyaW5nIn0seyJpZCI6Njg3NTMyNzE1MDczODI5NjUzNSwibmFtZSI6IkVURU5SIiwidmFsdWVUeXBlIjoiU3RyaW5nIn0seyJpZCI6ODU3OTgyNzIyMTk2Mjk5NzEwLCJuYW1lIjoiRURBVFUiLCJ2YWx1ZVR5cGUiOiJTdHJpbmcifV0sInRpbWVzZXJpZXNQcm9wZXJ0aWVzIjpbXX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "EntityTypes/4609145159460188831/DataBindings/926c6cf7-edd4-5efa-b99b-b1b31ef30ee1.json",
+        "payload": "eyJkYXRhQmluZGluZ1R5cGUiOiJOb25UaW1lU2VyaWVzIiwic291cmNlIjp7InR5cGUiOiJMYWtlaG91c2VUYWJsZSIsIndvcmtzcGFjZUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwiaXRlbUlkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyIiwic291cmNlU2NoZW1hIjoiZGJvIiwic291cmNlVGFibGVOYW1lIjoidmJlcCJ9LCJwcm9wZXJ0eUJpbmRpbmdzIjpbeyJwcm9wZXJ0eUlkIjozNTMyNzg0MzgzNjM5MTk2Nzg1LCJzb3VyY2VDb2x1bW5OYW1lIjoiVkJFTE4ifSx7InByb3BlcnR5SWQiOjE3OTY3ODYzMjIzMDM3NjIzMzksInNvdXJjZUNvbHVtbk5hbWUiOiJQT1NOUiJ9LHsicHJvcGVydHlJZCI6Njg3NTMyNzE1MDczODI5NjUzNSwic291cmNlQ29sdW1uTmFtZSI6IkVURU5SIn0seyJwcm9wZXJ0eUlkIjo4NTc5ODI3MjIxOTYyOTk3MTAsInNvdXJjZUNvbHVtbk5hbWUiOiJFREFUVSJ9XX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "RelationshipTypes/3558931183609803493/definition.json",
+        "payload": "eyJpZCI6MzU1ODkzMTE4MzYwOTgwMzQ5MywibmFtZSI6IkVLS09fTElGTlJfTEZBMSIsIm5hbWVzcGFjZSI6InNhcCIsInNvdXJjZSI6eyJlbnRpdHlUeXBlSWQiOjg3OTY4NDEzODY3MTEyODYzNTl9LCJ0YXJnZXQiOnsiZW50aXR5VHlwZUlkIjozODY1NTQzNjEwMjExOTIyNjIwfX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "RelationshipTypes/1398709680704583364/definition.json",
+        "payload": "eyJpZCI6MTM5ODcwOTY4MDcwNDU4MzM2NCwibmFtZSI6IkVLUE9fRUJFTE5fRUtLTyIsIm5hbWVzcGFjZSI6InNhcCIsInNvdXJjZSI6eyJlbnRpdHlUeXBlSWQiOjczNjUxNjA4NDU4MTc0NTc2ODJ9LCJ0YXJnZXQiOnsiZW50aXR5VHlwZUlkIjo4Nzk2ODQxMzg2NzExMjg2MzU5fX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "RelationshipTypes/8806103516668020042/definition.json",
+        "payload": "eyJpZCI6ODgwNjEwMzUxNjY2ODAyMDA0MiwibmFtZSI6IkVLUE9fTUFUTlJfTUFSQSIsIm5hbWVzcGFjZSI6InNhcCIsInNvdXJjZSI6eyJlbnRpdHlUeXBlSWQiOjczNjUxNjA4NDU4MTc0NTc2ODJ9LCJ0YXJnZXQiOnsiZW50aXR5VHlwZUlkIjo4NTEwMDI0OTUwNTQ0ODcwNTgxfX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "RelationshipTypes/568958752367575663/definition.json",
+        "payload": "eyJpZCI6NTY4OTU4NzUyMzY3NTc1NjYzLCJuYW1lIjoiVkJBS19LVU5OUl9LTkExIiwibmFtZXNwYWNlIjoic2FwIiwic291cmNlIjp7ImVudGl0eVR5cGVJZCI6MTQ0OTM2NjE5MjkyOTk0MTY5fSwidGFyZ2V0Ijp7ImVudGl0eVR5cGVJZCI6NTgzODk4NzgxOTk4NDEzNDg1N319",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "RelationshipTypes/2836596967796150416/definition.json",
+        "payload": "eyJpZCI6MjgzNjU5Njk2Nzc5NjE1MDQxNiwibmFtZSI6IlZCQVBfVkJFTE5fVkJBSyIsIm5hbWVzcGFjZSI6InNhcCIsInNvdXJjZSI6eyJlbnRpdHlUeXBlSWQiOjI3MDQwMTg3NDU1NDk4MTgwMTN9LCJ0YXJnZXQiOnsiZW50aXR5VHlwZUlkIjoxNDQ5MzY2MTkyOTI5OTQxNjl9fQ==",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "RelationshipTypes/3617353245749031679/definition.json",
+        "payload": "eyJpZCI6MzYxNzM1MzI0NTc0OTAzMTY3OSwibmFtZSI6IlZCQVBfTUFUTlJfTUFSQSIsIm5hbWVzcGFjZSI6InNhcCIsInNvdXJjZSI6eyJlbnRpdHlUeXBlSWQiOjI3MDQwMTg3NDU1NDk4MTgwMTN9LCJ0YXJnZXQiOnsiZW50aXR5VHlwZUlkIjo4NTEwMDI0OTUwNTQ0ODcwNTgxfX0=",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": "RelationshipTypes/6615139937665328627/definition.json",
+        "payload": "eyJpZCI6NjYxNTEzOTkzNzY2NTMyODYyNywibmFtZSI6IlZCRVBfUE9TTlJfVkJBUCIsIm5hbWVzcGFjZSI6InNhcCIsInNvdXJjZSI6eyJlbnRpdHlUeXBlSWQiOjQ2MDkxNDUxNTk0NjAxODg4MzF9LCJ0YXJnZXQiOnsiZW50aXR5VHlwZUlkIjoyNzA0MDE4NzQ1NTQ5ODE4MDEzfX0=",
+        "payloadType": "InlineBase64"
+      }
+    ]
+  }
+}

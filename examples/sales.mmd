@@ -1,0 +1,24 @@
+erDiagram
+    EKKO { string keys "EBELN" }
+    %% EKKO: Purchasing Document Header
+    EKPO { string keys "EBELN, EBELP" }
+    %% EKPO: Purchasing Document Item
+    KNA1 { string keys "KUNNR" }
+    %% KNA1: General Data in Customer Master
+    LFA1 { string keys "LIFNR" }
+    %% LFA1: Vendor Master (General Section)
+    MARA { string keys "MATNR" }
+    %% MARA: General Material Data
+    VBAK { string keys "VBELN" }
+    %% VBAK: Sales Document: Header Data
+    VBAP { string keys "VBELN, POSNR" }
+    %% VBAP: Sales Document: Item Data
+    VBEP { string keys "VBELN, POSNR, ETENR" }
+    %% VBEP: Sales Document: Schedule Line Data
+    EKKO }o--|| LFA1 : "LIFNR"
+    EKPO }o--|| EKKO : "EBELN"
+    EKPO }o--|| MARA : "MATNR"
+    VBAK }o--|| KNA1 : "KUNNR"
+    VBAP }o--|| VBAK : "VBELN"
+    VBAP }o--|| MARA : "MATNR"
+    VBEP }o--|| VBAP : "POSNR"
