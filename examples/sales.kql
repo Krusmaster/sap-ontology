@@ -1,0 +1,23 @@
+let Nodes = datatable(n:dynamic)[
+    dynamic({"name":"EKKO","keys":"EBELN"}),
+    dynamic({"name":"EKPO","keys":"EBELN,EBELP"}),
+    dynamic({"name":"KNA1","keys":"KUNNR"}),
+    dynamic({"name":"LFA1","keys":"LIFNR"}),
+    dynamic({"name":"MARA","keys":"MATNR"}),
+    dynamic({"name":"VBAK","keys":"VBELN"}),
+    dynamic({"name":"VBAP","keys":"VBELN,POSNR"}),
+    dynamic({"name":"VBEP","keys":"VBELN,POSNR,ETENR"})
+] | extend name=tostring(n.name), keys=tostring(n.keys);
+let Edges = datatable(e:dynamic)[
+    dynamic({"src":"EKKO","dst":"LFA1","field":"LIFNR"}),
+    dynamic({"src":"EKPO","dst":"EKKO","field":"EBELN"}),
+    dynamic({"src":"EKPO","dst":"MARA","field":"MATNR"}),
+    dynamic({"src":"VBAK","dst":"KNA1","field":"KUNNR"}),
+    dynamic({"src":"VBAP","dst":"VBAK","field":"VBELN"}),
+    dynamic({"src":"VBAP","dst":"MARA","field":"MATNR"}),
+    dynamic({"src":"VBEP","dst":"VBAP","field":"POSNR"})
+] | extend src=tostring(e.src), dst=tostring(e.dst), field=tostring(e.field);
+Edges
+| make-graph src --> dst with Nodes on name
+| graph-match (header)-[r]->(ref)
+  project header=header.name, field=r.field, ref=ref.name

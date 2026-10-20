@@ -53,3 +53,14 @@ def test_ids_are_deterministic():
     a = fabric_iq_definition(g, "x", "ws", "lh")["definition"]["parts"]
     b = fabric_iq_definition(g, "x", "ws", "lh")["definition"]["parts"]
     assert [p["path"] for p in a] == [p["path"] for p in b]
+
+
+def test_graph_db_exports():
+    from sap_ontology import graphml, kql_graph, neo4j_csv
+    g = build_graph(load_dd(DD))
+    x = graphml(g)
+    assert "<graphml" in x and 'VBAP' in x
+    nodes, rels = neo4j_csv(g)
+    assert nodes.splitlines()[0] == "name:ID,text,keys,n_fields:int,:LABEL" and "VBAP,VBAK," in rels
+    k = kql_graph(g)
+    assert "make-graph src --> dst" in k and '"name":"VBAK"' in k

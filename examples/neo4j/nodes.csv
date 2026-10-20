@@ -1,0 +1,9 @@
+name:ID,text,keys,n_fields:int,:LABEL
+EKKO,Purchasing Document Header,EBELN,2,SapTable
+EKPO,Purchasing Document Item,EBELN|EBELP,4,SapTable
+KNA1,General Data in Customer Master,KUNNR,2,SapTable
+LFA1,Vendor Master (General Section),LIFNR,2,SapTable
+MARA,General Material Data,MATNR,2,SapTable
+VBAK,Sales Document: Header Data,VBELN,4,SapTable
+VBAP,Sales Document: Item Data,VBELN|POSNR,4,SapTable
+VBEP,Sales Document: Schedule Line Data,VBELN|POSNR|ETENR,4,SapTable

@@ -1,0 +1,84 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d5" for="edge" attr.name="kind" attr.type="string"/>
+<key id="d4" for="edge" attr.name="field" attr.type="string"/>
+<key id="d3" for="node" attr.name="n_fields" attr.type="long"/>
+<key id="d2" for="node" attr.name="keys" attr.type="string"/>
+<key id="d1" for="node" attr.name="text" attr.type="string"/>
+<key id="d0" for="node" attr.name="label" attr.type="string"/>
+<graph edgedefault="directed"><node id="EKKO">
+  <data key="d0">EKKO</data>
+  <data key="d1">Purchasing Document Header</data>
+  <data key="d2">EBELN</data>
+  <data key="d3">2</data>
+</node>
+<node id="EKPO">
+  <data key="d0">EKPO</data>
+  <data key="d1">Purchasing Document Item</data>
+  <data key="d2">EBELN,EBELP</data>
+  <data key="d3">4</data>
+</node>
+<node id="KNA1">
+  <data key="d0">KNA1</data>
+  <data key="d1">General Data in Customer Master</data>
+  <data key="d2">KUNNR</data>
+  <data key="d3">2</data>
+</node>
+<node id="LFA1">
+  <data key="d0">LFA1</data>
+  <data key="d1">Vendor Master (General Section)</data>
+  <data key="d2">LIFNR</data>
+  <data key="d3">2</data>
+</node>
+<node id="MARA">
+  <data key="d0">MARA</data>
+  <data key="d1">General Material Data</data>
+  <data key="d2">MATNR</data>
+  <data key="d3">2</data>
+</node>
+<node id="VBAK">
+  <data key="d0">VBAK</data>
+  <data key="d1">Sales Document: Header Data</data>
+  <data key="d2">VBELN</data>
+  <data key="d3">4</data>
+</node>
+<node id="VBAP">
+  <data key="d0">VBAP</data>
+  <data key="d1">Sales Document: Item Data</data>
+  <data key="d2">VBELN,POSNR</data>
+  <data key="d3">4</data>
+</node>
+<node id="VBEP">
+  <data key="d0">VBEP</data>
+  <data key="d1">Sales Document: Schedule Line Data</data>
+  <data key="d2">VBELN,POSNR,ETENR</data>
+  <data key="d3">4</data>
+</node>
+<edge source="EKKO" target="LFA1">
+  <data key="d4">LIFNR</data>
+  <data key="d5">REF</data>
+</edge>
+<edge source="EKPO" target="EKKO">
+  <data key="d4">EBELN</data>
+  <data key="d5">KEY</data>
+</edge>
+<edge source="EKPO" target="MARA">
+  <data key="d4">MATNR</data>
+  <data key="d5">REF</data>
+</edge>
+<edge source="VBAK" target="KNA1">
+  <data key="d4">KUNNR</data>
+  <data key="d5">REF</data>
+</edge>
+<edge source="VBAP" target="VBAK">
+  <data key="d4">VBELN</data>
+  <data key="d5">KEY</data>
+</edge>
+<edge source="VBAP" target="MARA">
+  <data key="d4">MATNR</data>
+  <data key="d5">REF</data>
+</edge>
+<edge source="VBEP" target="VBAP">
+  <data key="d4">POSNR</data>
+  <data key="d5">KEY</data>
+</edge>
+</graph></graphml>

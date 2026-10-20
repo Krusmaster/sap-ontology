@@ -11,12 +11,14 @@ header? what do I join on?* Weeks of translation before any engineering starts.
 - a **graph** of tables and foreign keys (Mermaid ER export),
 - **business-object suggestions** — header/item pairs found from key structure
   (VBAK→VBAP→VBEP, EKKO→EKPO) with the join keys, the starting point for a silver layer,
+- **graph-database exports** — GraphML (Gephi, yEd, Neo4j), Neo4j CSV for `neo4j-admin import`,
+  and a KQL `make-graph` snippet for Fabric Eventhouse,
 - a **Fabric IQ Ontology** item definition — entity types, keys, typed properties,
   relationships, data bindings to the mirrored lakehouse tables — ready to create with one command.
 
 ```
 sap-ontology objects  ./dd          # which header/item business objects exist?
-sap-ontology graph    ./dd --mermaid sap.mmd
+sap-ontology graph    ./dd --mermaid sap.mmd --graphml sap.graphml --neo4j ./neo4j --kql sap.kql
 sap-ontology ontology ./dd --name "SAP Sales" --workspace <ws-id> --lakehouse <lh-id>
 sap-ontology deploy   ontology.json --workspace <ws-id>     # az login first
 ```

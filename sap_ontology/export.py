@@ -119,3 +119,46 @@ def fabric_iq_definition(
         })
 
     return {"displayName": display_name, "type": "Ontology", "definition": {"parts": parts}}
+
+
+# ---- Graph database exports -------------------------------------------------------
+def graphml(g: nx.DiGraph) -> str:
+    """GraphML for Gephi, yEd, Neo4j (apoc.import.graphml), NetworkX round-trip."""
+    import io
+    h = nx.DiGraph()
+    for n, d in g.nodes(data=True):
+        h.add_node(n, label=n, text=d.get("text", ""), keys=",".join(d.get("keys", [])), n_fields=len(d.get("fields", [])))
+    for a, b, d in g.edges(data=True):
+        h.add_edge(a, b, field=d.get("field", ""), kind=d.get("kind", ""))
+    buf = io.BytesIO()
+    nx.write_graphml(h, buf)
+    return buf.getvalue().decode("utf-8")
+
+
+def neo4j_csv(g: nx.DiGraph) -> tuple[str, str]:
+    """(nodes.csv, rels.csv) for neo4j-admin import / LOAD CSV.
+
+    nodes:  name:ID, text, keys, n_fields:int, :LABEL
+    rels:   :START_ID, :END_ID, field, kind, :TYPE
+    """
+    import csv, io
+    nb, rb = io.StringIO(), io.StringIO()
+    nw = csv.writer(nb); nw.writerow(["name:ID", "text", "keys", "n_fields:int", ":LABEL"])
+    for n, d in g.nodes(data=True):
+        nw.writerow([n, d.get("text", ""), "|".join(d.get("keys", [])), len(d.get("fields", [])), "SapTable"])
+    rw = csv.writer(rb); rw.writerow([":START_ID", ":END_ID", "field", "kind", ":TYPE"])
+    for a, b, d in g.edges(data=True):
+        rw.writerow([a, b, d.get("field", ""), d.get("kind", ""), "REFERENCES"])
+    return nb.getvalue(), rb.getvalue()
+
+
+def kql_graph(g: nx.DiGraph) -> str:
+    """A KQL snippet that builds the same graph in Fabric Eventhouse with make-graph."""
+    nodes = ",\n    ".join(f'dynamic({{"name":"{n}","keys":"{",".join(d.get("keys", []))}"}})' for n, d in g.nodes(data=True))
+    edges = ",\n    ".join(f'dynamic({{"src":"{a}","dst":"{b}","field":"{d.get("field", "")}"}})' for a, b, d in g.edges(data=True))
+    return (
+        "let Nodes = datatable(n:dynamic)[\n    " + nodes + "\n] | extend name=tostring(n.name), keys=tostring(n.keys);\n"
+        "let Edges = datatable(e:dynamic)[\n    " + edges + "\n] | extend src=tostring(e.src), dst=tostring(e.dst), field=tostring(e.field);\n"
+        "Edges\n| make-graph src --> dst with Nodes on name\n"
+        "| graph-match (header)-[r]->(ref)\n  project header=header.name, field=r.field, ref=ref.name\n"
+    )

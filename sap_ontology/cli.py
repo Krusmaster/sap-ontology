@@ -1,6 +1,6 @@
 """sap-ontology: SAP Data Dictionary -> graph -> business-object suggestions -> Fabric IQ ontology.
 
-    sap-ontology graph  ./dd --tables VBAK,VBAP,KNA1 --mermaid out.mmd
+    sap-ontology graph  ./dd --tables VBAK,VBAP,KNA1 --mermaid out.mmd --graphml out.graphml --neo4j ./neo4j --kql out.kql
     sap-ontology objects ./dd
     sap-ontology ontology ./dd --name "SAP Sales" --workspace <ws-id> --lakehouse <lh-id> --out ontology.json
     sap-ontology deploy ontology.json --workspace <ws-id>      # needs: az login
@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 from .dd import build_graph, load_dd, suggest_business_objects
-from .export import fabric_iq_definition, mermaid
+from .export import fabric_iq_definition, graphml, kql_graph, mermaid, neo4j_csv
 
 FABRIC = "https://api.fabric.microsoft.com"
 
@@ -31,8 +31,15 @@ def cmd_graph(a: argparse.Namespace) -> int:
     g = build_graph(load_dd(a.dd), _tables(a.tables))
     print(f"{g.number_of_nodes()} tables, {g.number_of_edges()} foreign keys")
     if a.mermaid:
-        Path(a.mermaid).write_text(mermaid(g), encoding="utf-8")
-        print(f"wrote {a.mermaid}")
+        Path(a.mermaid).write_text(mermaid(g), encoding="utf-8"); print(f"wrote {a.mermaid}")
+    if a.graphml:
+        Path(a.graphml).write_text(graphml(g), encoding="utf-8"); print(f"wrote {a.graphml}")
+    if a.neo4j:
+        nodes, rels = neo4j_csv(g); d = Path(a.neo4j); d.mkdir(parents=True, exist_ok=True)
+        (d / "nodes.csv").write_text(nodes, encoding="utf-8"); (d / "rels.csv").write_text(rels, encoding="utf-8")
+        print(f"wrote {d}/nodes.csv, {d}/rels.csv")
+    if a.kql:
+        Path(a.kql).write_text(kql_graph(g), encoding="utf-8"); print(f"wrote {a.kql}")
     return 0
 
 
@@ -88,6 +95,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("graph", help="build the FK graph, optionally write Mermaid")
     p.add_argument("dd"); p.add_argument("--tables"); p.add_argument("--mermaid")
+    p.add_argument("--graphml", help="write GraphML (Gephi, yEd, Neo4j apoc)")
+    p.add_argument("--neo4j", help="directory for nodes.csv + rels.csv (neo4j-admin import)")
+    p.add_argument("--kql", help="write a KQL make-graph snippet for Fabric Eventhouse")
     p.set_defaults(fn=cmd_graph)
 
     p = sub.add_parser("objects", help="suggest header/item business objects")
