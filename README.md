@@ -66,6 +66,15 @@ v0.1. The Fabric IQ ontology item is in preview and documented by example only. 
 here follow Microsoft's ontology-authoring guidance; before trusting them, create one ontology by
 hand in your tenant, fetch it with *Get Item Definition*, and diff. Report mismatches as issues.
 
+## Works on
+
+| Platform | Status |
+| --- | --- |
+| Fabric | yes — all features, incl. the Fabric IQ ontology export |
+| Databricks | yes — graph, business objects, GraphML/Neo4j/KQL from Spark tables or CSV |
+| Snowflake | yes — graph, business objects, GraphML/Neo4j from CSV or a pandas DataFrame |
+| Local Python | yes — from SE16 CSV exports |
+
 ## License
 
 MIT
