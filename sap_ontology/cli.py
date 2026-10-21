@@ -124,14 +124,16 @@ def cmd_mirror(a: argparse.Namespace) -> int:
     custom_keys = yaml.safe_load(Path(a.custom_keys).read_text()) if a.custom_keys else None
     g, rep = from_dd03nd(dd03nd, tables, custom_keys=custom_keys, strip_suffix=a.strip_suffix, name_map=name_map)
     conf = yaml.safe_load(Path(a.relationships).read_text()) if a.relationships else None
-    h, amb = infer_edges(g, confirmed=conf)
+    h, amb = infer_edges(g, confirmed=conf, include_text_key_edges=a.include_text_key_edges)
     print("match:", rep.summary())
     for t in rep.unmatched_tables:
         print(f"  unmatched table: {t}{'  (custom Z/Y)' if t in rep.custom_views else ''}")
     for v in rep.multi_node_views:
         print(f"  warning: {v} has more than one nodename in DD03ND")
-    print(f"graph: {h.number_of_nodes()} tables, {h.number_of_edges()} edges "
-          f"({sum(1 for _, _, d in h.edges(data=True) if d.get('inferred'))} inferred)")
+    kinds = {}
+    for _, _, d in h.edges(data=True):
+        kinds[d.get("kind", "?")] = kinds.get(d.get("kind", "?"), 0) + 1
+    print(f"graph: {h.number_of_nodes()} tables, {h.number_of_edges()} edges " + ", ".join(f"{k.lower()} {v}" for k, v in sorted(kinds.items())))
     for x in amb:
         print(f"  ambiguous: {x['column']} is the key of {', '.join(x['owners'])} — add a relationships YAML entry")
     for s_ in suggest_business_objects(h):
@@ -174,6 +176,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--name-map", help="YAML {table: strucobjn}")
     p.add_argument("--custom-keys", help="YAML {table: [key columns]} for Z/Y views")
     p.add_argument("--relationships", help="YAML list of {from,to,field,action}")
+    p.add_argument("--include-text-key-edges", action="store_true", help="keep edges to LANGUAGE-style tables (noise by default)")
     p.add_argument("--mermaid"); p.add_argument("--out"); p.add_argument("--name")
     p.add_argument("--workspace"); p.add_argument("--lakehouse")
     p.set_defaults(fn=cmd_mirror)

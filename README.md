@@ -81,6 +81,12 @@ What the adapter does, and does not do:
   (single-column keys first). Every inferred edge is marked `inferred=True` with a reason.
   A column that is the key of two tables is reported as ambiguous, not guessed. A
   `relationships.yaml` can confirm, add, override or drop edges — see `examples/mirror/`.
+- **Text views** (`I_COSTCENTERTEXT` = `I_COSTCENTER` key + `LANGUAGE`) get a `TEXT_OF` edge to
+  their master, never the reverse. Edges to the language table itself are dropped by default
+  (`--include-text-key-edges` to keep them) — on a real S/4 mirror they were a quarter of all edges.
+- **Custom Z/Y views**: name inference finds almost nothing there. `custom_keys` +
+  `relationships.yaml` are the primary source for them, and will stay so until CDS associations
+  reach the mirror (DD03ND carries none today).
 
 Local dry run of the same logic on a CSV export:
 

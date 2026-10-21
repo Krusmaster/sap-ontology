@@ -148,3 +148,21 @@ def test_multi_column_keys_can_be_switched_off():
     assert h.number_of_edges() == 0
     h, _ = infer_edges(g)
     assert h.has_edge("C", "A")
+
+
+def test_text_view_direction_and_language_noise():
+    g = _g({
+        "I_LANGUAGE": (["LANGUAGE"], ["LANGUAGENAME"]),
+        "I_COSTCENTER": (["COSTCENTER"], ["LANGUAGE", "VALIDTO"]),          # master view that happens to carry LANGUAGE
+        "I_COSTCENTERTEXT": (["COSTCENTER", "LANGUAGE"], ["COSTCENTERNAME"]),
+        "I_PRODUCT": (["PRODUCT"], ["LANGUAGE"]),
+    })
+    h, amb = infer_edges(g)
+    assert h.has_edge("I_COSTCENTERTEXT", "I_COSTCENTER") and h.edges["I_COSTCENTERTEXT", "I_COSTCENTER"]["kind"] == "TEXT_OF"
+    assert not h.has_edge("I_COSTCENTER", "I_COSTCENTERTEXT")                # never the false direction
+    assert not h.has_edge("I_COSTCENTER", "I_LANGUAGE") and not h.has_edge("I_PRODUCT", "I_LANGUAGE")  # noise dropped
+    assert amb == []
+    h2, _ = infer_edges(g, include_text_key_edges=True)
+    assert h2.has_edge("I_COSTCENTER", "I_LANGUAGE")                        # opt-in keeps them
+    s = {x["object"]: x for x in suggest_business_objects(h)}
+    assert "I_COSTCENTERTEXT" not in s.get("I_COSTCENTER", {}).get("items", [])  # text view is not an item

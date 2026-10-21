@@ -168,10 +168,15 @@ def is_item_of(b_keys: list[str], a_keys: list[str], other_single_keys: set[str]
     return b_keys[-1] not in other_single_keys
 
 
+TEXT_KEYS = {"LANGUAGE", "SPRAS", "LANGU", "LANGUAGECODE"}
+
+
 def infer_edges(
     g: nx.DiGraph,
     confirmed: list[dict] | None = None,
     include_multi_column_keys: bool = True,
+    text_keys: set[str] | None = None,
+    include_text_key_edges: bool = False,
 ) -> tuple[nx.DiGraph, list[dict]]:
     """Derive relationships from key structure when no foreign-key catalogue exists.
 
@@ -184,9 +189,15 @@ def infer_edges(
     edge is marked inferred=True with a reason. A key (single or multi) owned by two or more
     tables is AMBIGUOUS: no edge, reported instead.
 
+    Text views: when A's key = B's key + a text key (LANGUAGE, SPRAS, ...), A is the text view of B.
+    Edge A -> B with kind TEXT_OF, never B -> A (a master view that happens to carry LANGUAGE must
+    not point at its own text view). Edges to the language table itself (key = text key) are noise
+    for a business graph and are dropped unless include_text_key_edges=True.
+
     confirmed: list of {"from": B, "to": A, "field": col, "action": "confirm"|"override"|"add"|"drop"}
                from a relationships YAML. Applied after inference; "drop" removes an inferred edge.
     """
+    text_keys = {t.upper() for t in (text_keys if text_keys is not None else TEXT_KEYS)}
     keys = {n: [k.upper() for k in d.get("keys", [])] for n, d in g.nodes(data=True)}
     cols = {n: {f["FIELDNAME"].upper() for f in d.get("fields", [])} for n, d in g.nodes(data=True)}
     ambiguous: list[dict] = []
@@ -198,10 +209,23 @@ def infer_edges(
     single_keys = {k[0] for k in owners if len(k) == 1}
 
     h = g.copy()
+
+    # text views first: A.keys = B.keys + text key  =>  A -text of-> B
+    text_of: dict[str, str] = {}
+    by_key = {tuple(k): n for n, k in keys.items() if k and len(owners.get(tuple(k), [])) == 1}
+    for a, ka in keys.items():
+        if len(ka) >= 2 and ka[-1] in text_keys:
+            b = by_key.get(tuple(ka[:-1]))
+            if b and b != a:
+                text_of[a] = b
+                h.add_edge(a, b, field=",".join(ka[:-1]), kind="TEXT_OF", inferred=True, reason=f"{a} is the text view of {b}")
+
     ordered = sorted(owners.items(), key=lambda kv: len(kv[0]))
     for key, tabs in ordered:
         if len(key) > 1 and not include_multi_column_keys:
             continue
+        if len(key) == 1 and key[0] in text_keys and not include_text_key_edges:
+            continue                                      # edges to I_LANGUAGE etc.: noise
         if len(tabs) > 1:
             ambiguous.append({"column": ",".join(key), "owners": sorted(tabs),
                               "reason": f"{'single' if len(key) == 1 else 'multi'}-column key of several tables"})
@@ -215,6 +239,8 @@ def infer_edges(
                 continue                                  # same key: 1:1 extension, not a reference
             if is_item_of(keys[b], ka, single_keys - set(ka)):
                 continue                                  # header/item, handled elsewhere
+            if text_of.get(a) == b or text_of.get(b) == a:
+                continue                                  # text view pair already linked A -> B
             if not h.has_edge(b, a):
                 h.add_edge(b, a, field=",".join(ka), kind="INFERRED", inferred=True,
                            reason=f"{b} carries key of {a} ({','.join(ka)})")
