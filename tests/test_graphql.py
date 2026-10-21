@@ -21,7 +21,7 @@ def test_graphql_name():
 def test_definition_shape_from_classic_dd():
     g = build_graph(load_dd(DD))
     env = fabric_graphql_definition(g, "SAP_GraphQL", "ws", "sqlep")
-    assert env["type"] == "GraphQLApi" and env["definition"]["format"] == "GraphQLApiV1"
+    assert env["type"] == "GraphQLApi" and "format" not in env["definition"]     # InvalidDefinitionFormat otherwise
     parts = _parts(env)
     d = parts["graphql-definition.json"]
     assert d["$schema"].endswith("/graphqlApi/definition/1.0.0/schema.json")
@@ -32,10 +32,10 @@ def test_definition_shape_from_classic_dd():
     vbap = objs["VBAP"]
     assert vbap["sourceObject"] == "dbo.VBAP" and vbap["sourceObjectType"] == "Table"
     assert vbap["actions"] == {"Query": "Enabled", "Query_by_pk": "Enabled"}       # lakehouse: read-only
-    assert "MANDT" not in vbap["fieldMappings"] and "VBELN" in vbap["fieldMappings"]
-    rel = next(r for r in vbap["relationships"] if r["targetObject"] == "VBAK")
-    assert rel == {"field": "vbak", "cardinality": "ManyToOne", "targetObject": "VBAK", "sourceFields": ["VBELN"], "targetFields": ["VBELN"]}
-    back = next(r for r in objs["VBAK"]["relationships"] if r["targetObject"] == "VBAP")
+    assert "VBELN" in vbap["fieldMappings"]
+    rel = next(r for r in vbap["relationships"] if r["targetObject"] == "dbo.VBAK")   # target = sourceObject, not type name
+    assert rel == {"field": "vbak", "cardinality": "ManyToOne", "targetObject": "dbo.VBAK", "sourceFields": ["VBELN"], "targetFields": ["VBELN"]}
+    back = next(r for r in objs["VBAK"]["relationships"] if r["targetObject"] == "dbo.VBAP")
     assert back["cardinality"] == "OneToMany" and back["field"] == "vbaps"
     assert parts[".platform"]["metadata"]["type"] == "GraphQLApi"
 
@@ -55,14 +55,22 @@ def test_mirror_graph_text_views_and_multipart_mapping():
     env = fabric_graphql_definition(h, "Mirror_GraphQL", "ws", "sqlep")
     objs = {o["graphqlType"]: o for o in _parts(env)["graphql-definition.json"]["datasources"][0]["objects"]}
     # role-named mapping carried through: MATERIAL -> PRODUCT
-    rel = next(r for r in objs["I_SALESDOCUMENTITEM"]["relationships"] if r["targetObject"] == "I_PRODUCT")
+    rel = next(r for r in objs["I_SALESDOCUMENTITEM"]["relationships"] if r["targetObject"] == "dbo.I_PRODUCT")
     assert rel["sourceFields"] == ["MATERIAL"] and rel["targetFields"] == ["PRODUCT"]
-    # header/item pairs become header <-> items relationships for apps
-    hdr = next(r for r in objs["I_SALESDOCUMENTITEM"]["relationships"] if r["targetObject"] == "I_SALESDOCUMENT")
-    assert hdr == {"field": "header", "cardinality": "ManyToOne", "targetObject": "I_SALESDOCUMENT",
+    # header/item pairs become header <-> lines relationships for apps ("items" is reserved: 500 in Fabric)
+    hdr = next(r for r in objs["I_SALESDOCUMENTITEM"]["relationships"] if r["targetObject"] == "dbo.I_SALESDOCUMENT")
+    assert hdr == {"field": "header", "cardinality": "ManyToOne", "targetObject": "dbo.I_SALESDOCUMENT",
                    "sourceFields": ["SALESDOCUMENT"], "targetFields": ["SALESDOCUMENT"]}
-    items = next(r for r in objs["I_SALESDOCUMENT"]["relationships"] if r["targetObject"] == "I_SALESDOCUMENTITEM")
-    assert items["cardinality"] == "OneToMany" and items["field"] == "items"
+    items = next(r for r in objs["I_SALESDOCUMENT"]["relationships"] if r["targetObject"] == "dbo.I_SALESDOCUMENTITEM")
+    assert items["cardinality"] == "OneToMany" and items["field"] == "i_salesdocumentitem_lines"
+
+
+def test_every_endpoint_column_is_mapped_and_dunder_stripped():
+    dd = pd.read_csv(MIRROR / "DD03ND.csv", dtype=str)
+    spark_schemas = {"I_PRODUCT": {"PRODUCT": "string", "PRODUCTTYPE": "string", "__sequence_number": "bigint", "__timestamp": "timestamp"}}
+    g, _ = from_dd03nd(dd, ["I_PRODUCT"], spark_schemas=spark_schemas)
+    fm = _parts(fabric_graphql_definition(g, "t", "ws", "x"))["graphql-definition.json"]["datasources"][0]["objects"][0]["fieldMappings"]
+    assert fm["__sequence_number"] == "sequence_number" and fm["__timestamp"] == "timestamp" and fm["PRODUCT"] == "PRODUCT"
 
 
 def test_keyless_skipped_and_name_rule():

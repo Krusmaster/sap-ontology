@@ -7,11 +7,16 @@ tables, which keys, which relationships — and that is what this package alread
 The GraphQLApi item is GA and its definition is documented:
 https://learn.microsoft.com/rest/api/fabric/articles/item-management/definitions/graphql-api-definition
 
-Verified against the docs, NOT yet against a live item (see README "Status"):
-- a Lakehouse is exposed through its SQL analytics endpoint: sourceType "SqlAnalyticsEndpoint",
-  sourceItemId = the endpoint's item id (not the lakehouse id) — `sql_endpoint_id_for_lakehouse()`
-- relationships[].targetObject is assumed to be the target's graphqlType name
-- lakehouse sources are read-only: only Query / Query_by_pk are enabled
+Verified against a live item in a sandbox workspace (2026-10-21). Four things the docs do not say:
+- no "format" key in the definition envelope (InvalidDefinitionFormat otherwise)
+- relationships[].targetObject is the target's *sourceObject* ("dbo.i_product"), not its graphqlType
+- fieldMappings must list every column the SQL endpoint has, the mirror's __sequence_number and
+  __timestamp included; the GraphQL name drops the leading "__" (reserved in GraphQL)
+- a relationship field named "items" collides with the connection's own `items` list (500); the
+  header -> items field is therefore "<item>_lines"
+Also: a Lakehouse is exposed through its SQL analytics endpoint (sourceItemId = the endpoint's id,
+`sql_endpoint_id_for_lakehouse()`); lakehouse and mirrored sources are read-only. Query fields are
+named i_<TYPE>s, e.g. i_CUSTOMERs. A failed create locks the name for a few minutes.
 """
 from __future__ import annotations
 
@@ -25,7 +30,6 @@ import networkx as nx
 from .export import valid_item_name
 
 SCHEMA_URL = "https://developer.microsoft.com/json-schemas/fabric/item/graphqlApi/definition/1.0.0/schema.json"
-TECH_COLS = {"__SEQUENCE_NUMBER", "__TIMESTAMP", "__ROWMARKER__"}
 _GQL_NAME = re.compile(r"[^A-Za-z0-9_]")
 
 
@@ -76,7 +80,8 @@ def fabric_graphql_definition(
         if not d.get("keys"):
             skipped.append(table)
             continue
-        cols = [f["FIELDNAME"] for f in d.get("fields", []) if f["FIELDNAME"].upper() not in TECH_COLS]
+        # every column the endpoint has, technical ones included (else DataSourceMetadataKeyFieldInFieldMappings)
+        cols = d.get("columns") or [f["FIELDNAME"] for f in d.get("fields", [])]
         actions = {"Query": "Enabled", "Query_by_pk": "Enabled"}
         if writable and source_type in ("Warehouse", "SqlDbNative", "AzureSql"):
             actions.update({"Create": "Enabled", "Update": "Enabled", "Delete": "Disabled"})
@@ -85,7 +90,7 @@ def fabric_graphql_definition(
             "sourceObject": f"{schema}.{table_name(table)}",
             "sourceObjectType": "Table",
             "actions": actions,
-            "fieldMappings": {c: graphql_name(c) for c in cols},
+            "fieldMappings": {c: graphql_name(c.lstrip("_")) for c in cols},
             "relationships": [],
         }
 
@@ -100,14 +105,14 @@ def fabric_graphql_definition(
         objects[a]["relationships"].append({
             "field": graphql_name(b).lower() if d.get("kind") != "TEXT_OF" else "master",
             "cardinality": "ManyToOne",
-            "targetObject": objects[b]["graphqlType"],
+            "targetObject": objects[b]["sourceObject"],
             "sourceFields": src_fields,
             "targetFields": tgt_fields,
         })
         objects[b]["relationships"].append({
             "field": graphql_name(a).lower() + ("_texts" if d.get("kind") == "TEXT_OF" else "s"),
             "cardinality": "OneToMany",
-            "targetObject": objects[a]["graphqlType"],
+            "targetObject": objects[a]["sourceObject"],
             "sourceFields": tgt_fields,
             "targetFields": src_fields,
         })
@@ -123,12 +128,12 @@ def fabric_graphql_definition(
                     continue
                 keys = bo["join_keys"]
                 objects[head]["relationships"].append({
-                    "field": "items" if len(bo["items"]) == 1 else graphql_name(item).lower() + "s",
-                    "cardinality": "OneToMany", "targetObject": objects[item]["graphqlType"],
+                    "field": graphql_name(item).lower() + "_lines",   # "items" collides with the connection's list
+                    "cardinality": "OneToMany", "targetObject": objects[item]["sourceObject"],
                     "sourceFields": keys, "targetFields": keys,
                 })
                 objects[item]["relationships"].append({
-                    "field": "header", "cardinality": "ManyToOne", "targetObject": objects[head]["graphqlType"],
+                    "field": "header", "cardinality": "ManyToOne", "targetObject": objects[head]["sourceObject"],
                     "sourceFields": keys, "targetFields": keys,
                 })
 
@@ -151,7 +156,7 @@ def fabric_graphql_definition(
     env = {
         "displayName": display_name,
         "type": "GraphQLApi",
-        "definition": {"format": "GraphQLApiV1", "parts": [
+        "definition": {"parts": [
             {"path": "graphql-definition.json", "payload": b64(definition), "payloadType": "InlineBase64"},
             {"path": ".platform", "payload": b64(platform), "payloadType": "InlineBase64"},
         ]},

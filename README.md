@@ -107,20 +107,24 @@ gql = so.fabric_graphql_definition(h, "SAP_Mirror_GraphQL", WORKSPACE_ID, sql_ep
 print(deploy(gql, WORKSPACE_ID))
 ```
 
-What it emits: one `graphqlType` per table (technical columns dropped), `Query` + `Query_by_pk`
-(lakehouse and mirrored sources are read-only through GraphQL; `writable=True` adds
-Create/Update on Warehouse/SQL sources), a `ManyToOne` relationship per graph edge plus its
-`OneToMany` reverse, `header`/`items` relationships for header/item pairs, and `master`/`*_texts`
-for text views. Entities without keys are skipped.
+What it emits: one `graphqlType` per table with every endpoint column mapped (the mirror's
+`__sequence_number`/`__timestamp` become `sequence_number`/`timestamp`, GraphQL reserves `__`),
+`Query` + `Query_by_pk` (lakehouse and mirrored sources are read-only through GraphQL;
+`writable=True` adds Create/Update on Warehouse/SQL sources), a `ManyToOne` relationship per graph
+edge plus its `OneToMany` reverse, `header`/`<item>_lines` for header/item pairs, and
+`master`/`*_texts` for text views. Entities without keys are skipped. Query fields are named
+`i_<TYPE>s`, e.g. `i_CUSTOMERs`.
 
 Then in Lovable: Integrations → Microsoft Fabric → the item's `/graphql` URL + a service principal
-with *Run Queries and Mutations* on the item and introspection enabled.
+with *Run Queries and Mutations* on the item and introspection enabled. Both of those are portal
+clicks — introspection is off by default and the definition has no flag for it.
 
-*Status: the GraphQLApi definition is GA and documented, and this output follows the documented
-schema — but it has not been created in a workspace yet. Three things to verify in a sandbox:
-(1) `SqlAnalyticsEndpoint` + the endpoint id is the right way to expose a lakehouse,
-(2) `relationships[].targetObject` takes the `graphqlType` name, (3) `updateDefinition` works
-for GraphQLApi as it does for Ontology.*
+*Status (2026-10-21): ran end to end in a Fabric sandbox on synthetic fixtures. The item was created,
+updated in place on the second run, and nested queries across the inferred relationships returned
+rows — customer → orders, item → product, text view → main view, two hops, header ↔ lines. Four
+corrections to the documented definition came out of that run and are in the code: no `format`
+key, `targetObject` is the target's `sourceObject`, every endpoint column must be mapped, and a
+relationship field cannot be called `items`. A failed create locks the item name for a few minutes.*
 
 ## Two kinds of input
 
