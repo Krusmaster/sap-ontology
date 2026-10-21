@@ -82,30 +82,60 @@ def default_token_provider():
         return token_from_az
 
 
-def deploy(definition: dict, workspace: str, token_provider=None, poll_seconds: int = 3, max_polls: int = 60) -> dict:
-    """POST the ontology definition and wait for the long-running operation. Returns the final status dict.
+def find_item(workspace: str, display_name: str, headers: dict, item_type: str = "Ontology") -> str | None:
+    """Return the id of an existing item with this name and type in the workspace, else None."""
+    import requests
+    url = f"{FABRIC}/v1/workspaces/{workspace}/items?type={item_type}"
+    while url:
+        r = requests.get(url, headers=headers, timeout=30)
+        r.raise_for_status()
+        body = r.json()
+        for it in body.get("value", []):
+            if it.get("displayName") == display_name:
+                return it["id"]
+        url = body.get("continuationUri")
+    return None
+
+
+def deploy(definition: dict, workspace: str, token_provider=None, poll_seconds: int = 3, max_polls: int = 60,
+           update_existing: bool = True) -> dict:
+    """Create the Ontology item, or UPDATE it if one with the same displayName already exists.
+
+    Creating is a POST /items; every create also adds a Lakehouse (+ SQL endpoint) and a GraphModel
+    beside the ontology — even when the import fails. Re-running therefore uses
+    POST /items/{id}/updateDefinition, which replaces the whole definition and creates nothing new.
+    Set update_existing=False to force a new item.
 
     token_provider: callable returning a bearer token. Defaults to notebookutils inside Fabric, az locally.
-    Note: creating an Ontology item can also create companion items (Eventhouse, KQL database,
-    graph model) in the workspace. Use a sandbox workspace first.
+    Returns the final operation status dict, with "mode": "created" | "updated".
     """
     import requests  # optional dependency, only for deploy
 
     definition = {k: v for k, v in definition.items() if k != "skipped"}
     token = (token_provider or default_token_provider())()
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    r = requests.post(f"{FABRIC}/v1/workspaces/{workspace}/items", headers=headers, json=definition, timeout=60)
+
+    existing = find_item(workspace, definition["displayName"], headers) if update_existing else None
+    if existing:
+        r = requests.post(f"{FABRIC}/v1/workspaces/{workspace}/items/{existing}/updateDefinition",
+                          headers=headers, json={"definition": definition["definition"]}, timeout=60)
+        mode = "updated"
+    else:
+        r = requests.post(f"{FABRIC}/v1/workspaces/{workspace}/items", headers=headers, json=definition, timeout=60)
+        mode = "created"
+
     if r.status_code not in (200, 201, 202):
-        return {"status": "Failed", "http": r.status_code, "body": r.text}
+        return {"status": "Failed", "mode": mode, "http": r.status_code, "body": r.text}
     op = r.headers.get("x-ms-operation-id")
     if not op:
-        return {"status": "Succeeded", "id": r.json().get("id")}
+        return {"status": "Succeeded", "mode": mode, "id": existing or (r.json().get("id") if r.text else None)}
     for _ in range(max_polls):
         s = requests.get(f"{FABRIC}/v1/operations/{op}", headers=headers, timeout=30).json()
         if s.get("status") in ("Succeeded", "Failed"):
+            s["mode"] = mode
             return s
         time.sleep(poll_seconds)
-    return {"status": "Timeout", "operation": op}
+    return {"status": "Timeout", "mode": mode, "operation": op}
 
 
 def cmd_deploy(a: argparse.Namespace) -> int:

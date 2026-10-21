@@ -82,8 +82,12 @@ print(deploy(env, WORKSPACE_ID))                                    # uses noteb
 ```
 
 Then open the Ontology item in the workspace and check that relationships are queryable.
-Re-running updates the same item (ids are deterministic). *Status: the three steps are verified
-individually in a sandbox; this exact cell end-to-end is the next test.*
+**Re-running updates the existing item** (same `displayName` → `updateDefinition`), so a second run
+creates no new Lakehouse or GraphModel; ids are deterministic, so entities keep their identity.
+
+*Status: verified on synthetic fixtures in Fabric; the inference rules were cross-checked against a
+live S/4 mirror's metadata (71 views: 52 edges, 0 ambiguous). This exact cell end-to-end, and
+`updateDefinition` on re-run, are the next sandbox tests.*
 
 ## Two kinds of input
 
@@ -162,8 +166,8 @@ import leaves the three behind, so deploy to a sandbox workspace and clean up af
 **Open question:** whether a data binding may point at a *mirrored database's* tables directly
 or needs a lakehouse shortcut. Not verified yet; the binding currently targets a lakehouse item id.
 
-IDs are deterministic (hashed from names), so re-running updates the ontology instead of
-duplicating it.
+IDs are deterministic (hashed from names) and `deploy()` updates an item of the same name instead
+of creating a second one.
 
 ## Status
 
@@ -172,10 +176,12 @@ that Fabric **accepted and returned via Get Item Definition** (October 2026): `e
 namespace `usertypes` / `namespaceType Custom`, `dataBindingConfiguration` with
 `sourceTableProperties`, and a `Contextualizations/` file per relationship type mapping source
 keys and referencing columns. Without contextualizations, relationship types link nothing.
-**Verified 2026-10-21:** an Ontology item was created from this output in a sandbox workspace —
-11 entities (2- and 3-part keys accepted), 11 bindings, 9 relationship types with 9
-contextualizations (a 3-column source key onto a 2-column target accepted). Two things the first
-attempts taught: ids must be JSON strings, and item names may not contain spaces.
+**Verified 2026-10-21 on synthetic fixtures in a Fabric sandbox:** an Ontology item was created
+from this output — 11 entities (2- and 3-part keys accepted), 11 bindings, 9 relationship types
+with 9 contextualizations (a 3-column source key onto a 2-column target accepted). The inference
+rules were cross-checked against a live S/4 mirror's metadata; the package itself has not run
+against a live mirror yet. Two things the first attempts taught: ids must be JSON strings, and
+item names may not contain spaces.
 
 ## Works on
 
