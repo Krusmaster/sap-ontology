@@ -48,6 +48,43 @@ Standard SAP Data Dictionary tables — the same in ECC and S/4, since the 90s:
 Get them as CSV from SE16, or point the library at the mirrored Delta tables in Fabric. Nothing
 customer-specific is needed and nothing leaves your machine until you run `deploy`.
 
+## Quickstart — Fabric SAP Mirror, one notebook
+
+Run in a Fabric notebook attached to the lakehouse (or a lakehouse with shortcuts to the mirrored
+tables). Use a **sandbox workspace**: creating an Ontology item also creates a Lakehouse and a
+GraphModel beside it.
+
+```python
+%pip install git+https://github.com/Krusmaster/sap-ontology@sap-mirror-adapter pyyaml
+```
+
+```python
+import yaml, sap_ontology as so
+from sap_ontology.cli import deploy
+
+WORKSPACE_ID = "<sandbox workspace id>"
+LAKEHOUSE_ID = "<lakehouse id that holds the mirrored tables>"
+
+# 1. Tables + keys from DD03ND. Custom Z/Y views get keys only from custom_keys.
+g, report = so.from_lakehouse(spark, schema="dbo", strip_suffix=True,
+                              custom_keys={"ZC_SALESKPI": ["SalesDocument"]})
+print(report.summary()); print("unmatched:", report.unmatched_tables)
+
+# 2. Relationships: inferred from keys + the standard S/4 list (role-named keys) + your own.
+standard = yaml.safe_load(open("relationships_standard.yaml"))     # from examples/mirror/
+h, ambiguous = so.infer_edges(g, confirmed=standard)
+print(h.number_of_nodes(), "entities,", h.number_of_edges(), "relationships; ambiguous:", ambiguous)
+
+# 3. Definition + create. Name: letters, digits, underscores only.
+env = so.fabric_iq_definition(h, "SAP_Mirror_Ontology", WORKSPACE_ID, LAKEHOUSE_ID)
+print("skipped (no keys):", env.get("skipped", []))
+print(deploy(env, WORKSPACE_ID))                                    # uses notebookutils token
+```
+
+Then open the Ontology item in the workspace and check that relationships are queryable.
+Re-running updates the same item (ids are deterministic). *Status: the three steps are verified
+individually in a sandbox; this exact cell end-to-end is the next test.*
+
 ## Two kinds of input
 
 **Classic Data Dictionary** (DD02L, DD03L, DD08L — ECC/S/4 tables exported with SE16, or any
@@ -81,6 +118,9 @@ What the adapter does, and does not do:
   (single-column keys first). Every inferred edge is marked `inferred=True` with a reason.
   A column that is the key of two tables is reported as ambiguous, not guessed. A
   `relationships.yaml` can confirm, add, override or drop edges — see `examples/mirror/`.
+  **`examples/mirror/relationships_standard.yaml`** holds ~50 standard S/4 relationships that
+  name inference cannot see because CDS keys are role-named (`SoldToParty` → `I_Customer`).
+  Entries for tables not in your lakehouse are ignored; start from it and trim.
 - **Text views**: A is the text view of B when A's key contains a text key (`LANGUAGE`, `SPRAS`,
   …) and, text keys removed, equals B's key *as a set* — any order, text key anywhere
   (`I_COSTCENTERTEXT (COSTCENTER, CONTROLLINGAREA, LANGUAGE, VALIDITYENDDATE)` →

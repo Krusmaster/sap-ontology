@@ -236,3 +236,14 @@ def test_text_views_never_source_or_target_even_without_master():
     assert not any(b == "I_PRODUCTDESCRIPTION" for _, b in edges)          # never a target, even with no master
     assert not any(a == "I_PRODUCTDESCRIPTION" for a, _ in edges)
     assert amb == []
+
+
+def test_standard_relationships_file_loads_and_ignores_absent_tables():
+    conf = yaml.safe_load((DD / "relationships_standard.yaml").read_text())
+    assert len(conf) >= 40 and all({"from", "to", "field", "action"} <= set(c) for c in conf)
+    g, _ = from_dd03nd(dd(), LAKEHOUSE, strip_suffix=True)
+    before = set(g.nodes)
+    h, _ = infer_edges(g, confirmed=conf)
+    assert set(h.nodes) == before                              # no nodes invented for absent tables
+    assert h.has_edge("I_SALESDOCUMENTITEM", "I_PRODUCT")      # present pair gets its edge
+    assert not h.has_node("I_COMPANYCODE")

@@ -263,6 +263,8 @@ def infer_edges(
     for c in confirmed or []:
         f, t = c["from"].upper(), c["to"].upper()
         act = c.get("action", "confirm")
+        if f not in h.nodes or t not in h.nodes:
+            continue                                      # table not in this lakehouse: entry ignored
         if act == "drop":
             if h.has_edge(f, t):
                 h.remove_edge(f, t)
