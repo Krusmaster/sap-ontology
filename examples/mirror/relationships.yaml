@@ -1,0 +1,3 @@
+# Confirm, override, add or drop inferred relationships. Applied after inference.
+- {from: I_SALESDOCUMENTITEM, to: I_PRODUCT, field: MATERIAL, action: add}   # MATERIAL -> PRODUCT key has a different name
+- {from: I_PURCHASEORDERITEM, to: I_PRODUCT, field: MATERIAL, action: add}

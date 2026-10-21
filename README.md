@@ -43,19 +43,63 @@ Standard SAP Data Dictionary tables — the same in ECC and S/4, since the 90s:
 | DD08L | foreign key definitions | yes |
 | DD02T | table descriptions | no |
 | DD05S | foreign key field mappings | no (v0.2) |
+| DD03ND | CDS view fields/keys/types (SAP Mirror) | alternative input, see below |
 
 Get them as CSV from SE16, or point the library at the mirrored Delta tables in Fabric. Nothing
 customer-specific is needed and nothing leaves your machine until you run `deploy`.
 
-## In a Fabric notebook
+## Two kinds of input
+
+**Classic Data Dictionary** (DD02L, DD03L, DD08L — ECC/S/4 tables exported with SE16, or any
+mirror that replicates them): `load_dd` + `build_graph`. Foreign keys come from DD08L.
+
+**Fabric SAP Mirror** (S/4 CDS views → Datasphere replication flow → mirrored database): there is
+no DD02L/DD03L/DD08L. The mirror holds the CDS views as upper-case Delta tables and one reference
+table, **DD03ND** (fields, keys, types per view — no foreign keys, no texts). Use the `mirror`
+adapter:
 
 ```python
 import sap_ontology as so
-dd = {t: spark.table(f"sap_mirror.{t.lower()}").toPandas() for t in ["DD02L", "DD03L", "DD08L", "DD02T"]}
-g = so.build_graph(dd, tables=["VBAK", "VBAP", "VBEP", "KNA1", "MARA"])
-print(so.suggest_business_objects(g))
-env = so.fabric_iq_definition(g, "SAP Sales", workspace_id, lakehouse_id)
+g, report = so.from_lakehouse(spark, schema="dbo", strip_suffix=True,
+                              custom_keys={"ZC_SALESKPI": ["SalesDocument"]})
+print(report.summary())            # exact / via suffix / via map / unmatched (custom Z/Y)
+h, ambiguous = so.infer_edges(g, confirmed=yaml.safe_load(open("relationships.yaml")))
+print(so.suggest_business_objects(h))
+env = so.fabric_iq_definition(h, "SAP Sales", workspace_id, lakehouse_id)
 ```
+
+What the adapter does, and does not do:
+
+- Filters DD03ND to the lakehouse's tables **in Spark before `toPandas()`** (DD03ND is ~1.8M rows).
+- Matches names exactly, then — opt-in — after stripping a `_<SID>` suffix (`I_VIEW_P01` → `I_VIEW`),
+  then via an explicit `name_map`. Every unmatched table is reported in both directions.
+- Custom Z/Y views are not in DD03ND: columns come from the Spark schema, keys **only** from
+  `custom_keys`. Nothing is guessed.
+- Keeps `as4local = 'A'`, ignores `nodename`, warns if a view has more than one node.
+- `DATS` → DateTime, `NUMC` stays String (leading zeros), `CURR/QUAN/DEC` → Double.
+- **Relationships are inferred**, since DD08L is absent: B → A when B carries A's complete key
+  (single-column keys first). Every inferred edge is marked `inferred=True` with a reason.
+  A column that is the key of two tables is reported as ambiguous, not guessed. A
+  `relationships.yaml` can confirm, add, override or drop edges — see `examples/mirror/`.
+
+Local dry run of the same logic on a CSV export:
+
+```
+sap-ontology mirror DD03ND.csv tables.txt --strip-suffix --custom-keys keys.yaml --relationships rel.yaml --mermaid out.mmd
+```
+
+## Deploying — read this first
+
+`deploy` posts the definition with the running user's token: `notebookutils.credentials.getToken`
+inside a Fabric notebook, `az account get-access-token` locally. Pass your own `token_provider`
+to `sap_ontology.cli.deploy()` for anything else.
+
+**Creating an Ontology item can also create companion items** in the workspace — an Eventhouse,
+a KQL database and a graph model were observed. Deploy to a sandbox workspace first, never
+straight into a shared DEV.
+
+**Open question:** whether a data binding may point at a *mirrored database's* tables directly
+or needs a lakehouse shortcut. Not verified yet; the binding currently targets a lakehouse item id.
 
 IDs are deterministic (hashed from names), so re-running updates the ontology instead of
 duplicating it.

@@ -17,6 +17,7 @@ import networkx as nx
 _TYPE_MAP = {
     "INT1": "BigInt", "INT2": "BigInt", "INT4": "BigInt", "INT8": "BigInt",
     "DEC": "Double", "CURR": "Double", "QUAN": "Double", "FLTP": "Double", "DF16_DEC": "Double", "DF34_DEC": "Double",
+    "DATS": "DateTime",   # NUMC stays String on purpose (leading zeros)
 }
 
 
