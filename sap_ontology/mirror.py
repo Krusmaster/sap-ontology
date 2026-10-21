@@ -260,6 +260,12 @@ def infer_edges(
                 h.add_edge(b, a, field=",".join(ka), kind="INFERRED", inferred=True,
                            reason=f"{b} carries key of {a} ({','.join(ka)})")
 
+    # inferred edges carry their mapping explicitly: source column -> target key column (same names)
+    for a, b, d in h.edges(data=True):
+        if "mapping" not in d:
+            d["mapping"] = [(k, k) for k in keys[b]]
+
+    not_applied: list[dict] = []
     for c in confirmed or []:
         f, t = c["from"].upper(), c["to"].upper()
         act = c.get("action", "confirm")
@@ -268,9 +274,59 @@ def infer_edges(
         if act == "drop":
             if h.has_edge(f, t):
                 h.remove_edge(f, t)
-        else:
-            h.add_edge(f, t, field=c.get("field", ""), kind="CONFIRMED" if act == "confirm" else act.upper(), inferred=False, reason="yaml")
+            continue
+        mapping, problem = resolve_mapping(c.get("field", ""), cols[f], keys[t])
+        if problem:
+            not_applied.append({"from": f, "to": t, "field": c.get("field", ""), "reason": problem})
+            continue
+        h.add_edge(f, t, field=",".join(src for src, _ in mapping), mapping=mapping,
+                   kind="CONFIRMED" if act == "confirm" else act.upper(), inferred=False, reason="yaml")
+    h.graph["not_applied"] = not_applied
     return h, ambiguous
+
+
+def resolve_mapping(field: str | list[str], source_cols: set[str], target_keys: list[str]) -> tuple[list[tuple[str, str]], str | None]:
+    """Map referencing column(s) in the source table onto the target's key parts, in full.
+
+    `field` names the referencing column(s) (string, comma-separated, or list). They are matched
+    to target key parts by name first, else by position; remaining key parts are filled with
+    same-named columns of the source table. Returns (mapping, None) or ([], reason) when any part
+    cannot be filled or a column does not exist in the source — Fabric requires
+    len(targetKeyRefBindings) == len(entityIdParts).
+    """
+    given = [x.strip().upper() for x in (field if isinstance(field, list) else str(field).split(",")) if x and x.strip()]
+    target_keys = [k.upper() for k in target_keys]
+    if not target_keys:
+        return [], "target has no key"
+    mapping: dict[str, str] = {}                           # target key col -> source col
+    unplaced = []
+    for g_ in given:
+        if g_ in target_keys and g_ not in mapping:
+            mapping[g_] = g_
+        else:
+            unplaced.append(g_)
+    for tk in target_keys:                                 # positional fill for role-named columns
+        if tk not in mapping and unplaced:
+            mapping[tk] = unplaced.pop(0)
+    for tk in target_keys:                                 # same-named fill for the rest
+        if tk not in mapping and tk in source_cols:
+            mapping[tk] = tk
+    missing = [tk for tk in target_keys if tk not in mapping]
+    if missing:
+        return [], f"cannot fill target key part(s) {','.join(missing)} from source columns"
+    absent = [src for src in mapping.values() if src not in source_cols]
+    if absent:
+        return [], f"column(s) {','.join(absent)} not in source table"
+    if unplaced:
+        return [], f"field(s) {','.join(unplaced)} do not fit the target key {','.join(target_keys)}"
+    return [(mapping[tk], tk) for tk in target_keys], None
+
+
+def standard_relationships() -> list[dict]:
+    """The bundled standard S/4 relationships list (role-named CDS keys name inference cannot see)."""
+    import yaml
+    from importlib.resources import files
+    return yaml.safe_load(files("sap_ontology").joinpath("data/relationships_standard.yaml").read_text(encoding="utf-8"))
 
 
 def _spark_to_dd(t: str) -> str:

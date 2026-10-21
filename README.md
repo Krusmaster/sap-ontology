@@ -64,16 +64,17 @@ from sap_ontology.cli import deploy
 
 WORKSPACE_ID = "<sandbox workspace id>"
 LAKEHOUSE_ID = "<lakehouse id that holds the mirrored tables>"
+my_relationships = []     # or yaml.safe_load(open("relationships.yaml")) for your own Z/Y views
 
 # 1. Tables + keys from DD03ND. Custom Z/Y views get keys only from custom_keys.
 g, report = so.from_lakehouse(spark, schema="dbo", strip_suffix=True,
                               custom_keys={"ZC_SALESKPI": ["SalesDocument"]})
 print(report.summary()); print("unmatched:", report.unmatched_tables)
 
-# 2. Relationships: inferred from keys + the standard S/4 list (role-named keys) + your own.
-standard = yaml.safe_load(open("relationships_standard.yaml"))     # from examples/mirror/
-h, ambiguous = so.infer_edges(g, confirmed=standard)
-print(h.number_of_nodes(), "entities,", h.number_of_edges(), "relationships; ambiguous:", ambiguous)
+# 2. Relationships: inferred from keys + the bundled standard S/4 list (role-named keys) + your own.
+h, ambiguous = so.infer_edges(g, confirmed=so.standard_relationships() + my_relationships)
+print(h.number_of_nodes(), "entities,", h.number_of_edges(), "relationships")
+print("ambiguous:", ambiguous); print("not applied:", h.graph["not_applied"])   # YAML entries that could not map a full key
 
 # 3. Definition + create. Name: letters, digits, underscores only.
 env = so.fabric_iq_definition(h, "SAP_Mirror_Ontology", WORKSPACE_ID, LAKEHOUSE_ID)
@@ -122,9 +123,13 @@ What the adapter does, and does not do:
   (single-column keys first). Every inferred edge is marked `inferred=True` with a reason.
   A column that is the key of two tables is reported as ambiguous, not guessed. A
   `relationships.yaml` can confirm, add, override or drop edges — see `examples/mirror/`.
-  **`examples/mirror/relationships_standard.yaml`** holds ~50 standard S/4 relationships that
-  name inference cannot see because CDS keys are role-named (`SoldToParty` → `I_Customer`).
-  Entries for tables not in your lakehouse are ignored; start from it and trim.
+  **`so.standard_relationships()`** returns ~50 bundled standard S/4 relationships that name
+  inference cannot see because CDS keys are role-named (`SoldToParty` → `I_Customer`). Entries
+  for tables not in your lakehouse are ignored. An entry is applied only if every part of the
+  target's key can be mapped from the source table — by the named field, then by same-named
+  columns (`STORAGELOCATION` onto `(PLANT, STORAGELOCATION)` fills `PLANT` from the source);
+  otherwise it lands in `h.graph["not_applied"]` with the reason. Fabric requires exactly one
+  binding per target key part, and `fabric_iq_definition` checks that before you reach Fabric.
 - **Text views**: A is the text view of B when A's key contains a text key (`LANGUAGE`, `SPRAS`,
   …) and, text keys removed, equals B's key *as a set* — any order, text key anywhere
   (`I_COSTCENTERTEXT (COSTCENTER, CONTROLLINGAREA, LANGUAGE, VALIDITYENDDATE)` →

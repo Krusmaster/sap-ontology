@@ -22,3 +22,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["sap_ontology*"]
+
+[tool.setuptools.package-data]
+sap_ontology = ["data/*.yaml"]

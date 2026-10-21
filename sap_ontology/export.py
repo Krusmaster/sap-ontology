@@ -162,18 +162,36 @@ def fabric_iq_definition(
             "source": {"entityTypeId": entity_ids[a]},
             "target": {"entityTypeId": entity_ids[b]},
         })
-        # Contextualization: the source table maps its own key -> source entity, referencing col(s) -> target key
+        # Contextualization: the source table maps its own key -> source entity, referencing col(s) -> target key.
+        # Fabric requires len(targetKeyRefBindings) == len(target entityIdParts); check it here, by name.
         src_keys = g.nodes[a].get("keys", [])
-        tgt_keys = g.nodes[b].get("keys", [])
-        ref_cols = [c.strip() for c in field.split(",") if c.strip()] or tgt_keys
+        tgt_keys = [k.upper() for k in g.nodes[b].get("keys", [])]
+        src_cols = {f["FIELDNAME"].upper() for f in g.nodes[a].get("fields", [])}
+        mapping = d.get("mapping")
+        if not mapping:
+            ref_cols = [c.strip().upper() for c in field.split(",") if c.strip()] or tgt_keys
+            by_name = {c: c for c in ref_cols if c in tgt_keys}
+            rest = [c for c in ref_cols if c not in by_name]
+            mapping = []
+            for tk in tgt_keys:
+                src = by_name.get(tk) or (rest.pop(0) if rest else (tk if tk in src_cols else None))
+                if src is None:
+                    raise ValueError(f"relationship {a} -> {b}: cannot map target key part {tk} from {a}'s columns")
+                mapping.append((src, tk))
+        mapping = [(src.upper(), tk.upper()) for src, tk in mapping]
+        if len(mapping) != len(tgt_keys) or [tk for _, tk in mapping] != tgt_keys:
+            raise ValueError(f"relationship {a} -> {b}: mapping {mapping} does not cover target key {tgt_keys}")
+        bad = [src for src, _ in mapping if src not in src_cols]
+        if bad:
+            raise ValueError(f"relationship {a} -> {b}: column(s) {bad} not in {a}")
         cid = _guid("ctx", a, b, field)
         add(f"RelationshipTypes/{rid}/Contextualizations/{cid}.json", {
             "id": cid,
             "dataBindingTable": table_props(a),
             "sourceKeyRefBindings": [{"sourceColumnName": k, "targetPropertyId": prop_ids[(a, k.upper())]}
                                      for k in src_keys if (a, k.upper()) in prop_ids],
-            "targetKeyRefBindings": [{"sourceColumnName": c, "targetPropertyId": prop_ids[(b, tk.upper())]}
-                                     for c, tk in zip(ref_cols, tgt_keys) if (b, tk.upper()) in prop_ids],
+            "targetKeyRefBindings": [{"sourceColumnName": src, "targetPropertyId": prop_ids[(b, tk)]}
+                                     for src, tk in mapping],
         })
 
     env = {"displayName": display_name, "type": "Ontology", "definition": {"parts": parts}}

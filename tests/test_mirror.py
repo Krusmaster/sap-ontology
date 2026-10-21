@@ -239,7 +239,8 @@ def test_text_views_never_source_or_target_even_without_master():
 
 
 def test_standard_relationships_file_loads_and_ignores_absent_tables():
-    conf = yaml.safe_load((DD / "relationships_standard.yaml").read_text())
+    from sap_ontology import standard_relationships
+    conf = standard_relationships()
     assert len(conf) >= 40 and all({"from", "to", "field", "action"} <= set(c) for c in conf)
     g, _ = from_dd03nd(dd(), LAKEHOUSE, strip_suffix=True)
     before = set(g.nodes)
@@ -247,3 +248,46 @@ def test_standard_relationships_file_loads_and_ignores_absent_tables():
     assert set(h.nodes) == before                              # no nodes invented for absent tables
     assert h.has_edge("I_SALESDOCUMENTITEM", "I_PRODUCT")      # present pair gets its edge
     assert not h.has_node("I_COMPANYCODE")
+
+
+def test_confirmed_entry_fills_multi_part_target_key_or_is_reported():
+    from sap_ontology import resolve_mapping
+    g = _g({
+        "I_PLANT": (["PLANT"], []),
+        "I_STORAGELOCATION": (["PLANT", "STORAGELOCATION"], []),
+        "I_SALESDOCUMENTITEM": (["SALESDOCUMENT", "SALESDOCUMENTITEM"], ["PLANT", "STORAGELOCATION", "PRODUCT"]),
+        "I_PRODUCT": (["PRODUCT"], []),
+        "ZC_NOPLANT": (["X"], ["STORAGELOCATION"]),
+    })
+    conf = [
+        {"from": "I_SALESDOCUMENTITEM", "to": "I_STORAGELOCATION", "field": "STORAGELOCATION", "action": "add"},  # PLANT filled by name
+        {"from": "I_SALESDOCUMENTITEM", "to": "I_PRODUCT", "field": "MATERIAL", "action": "add"},               # MATERIAL not a column -> not applied
+        {"from": "ZC_NOPLANT", "to": "I_STORAGELOCATION", "field": "STORAGELOCATION", "action": "add"},         # PLANT missing -> not applied
+    ]
+    h, _ = infer_edges(g, confirmed=conf)
+    assert h.edges["I_SALESDOCUMENTITEM", "I_STORAGELOCATION"]["mapping"] == [("PLANT", "PLANT"), ("STORAGELOCATION", "STORAGELOCATION")]
+    assert h.edges["I_SALESDOCUMENTITEM", "I_PRODUCT"]["kind"] == "INFERRED"   # found via PRODUCT; the MATERIAL entry was not applied
+    assert not h.has_edge("ZC_NOPLANT", "I_STORAGELOCATION")
+    reasons = {(x["from"], x["to"]): x["reason"] for x in h.graph["not_applied"]}
+    assert "MATERIAL" in reasons[("I_SALESDOCUMENTITEM", "I_PRODUCT")]
+    assert "PLANT" in reasons[("ZC_NOPLANT", "I_STORAGELOCATION")]
+    # role-named single column onto a single-part key, positional
+    assert resolve_mapping("SOLDTOPARTY", {"SOLDTOPARTY", "X"}, ["CUSTOMER"]) == ([("SOLDTOPARTY", "CUSTOMER")], None)
+    # every contextualization in the definition covers the full target key
+    import base64, json
+    env = fabric_iq_definition(h, "t", "ws", "lh")
+    parts = {p["path"]: json.loads(base64.b64decode(p["payload"])) for p in env["definition"]["parts"]}
+    ents = {o["id"]: o for k, o in parts.items() if k.startswith("EntityTypes/") and k.endswith("definition.json")}
+    rels = {k.split("/")[1]: o for k, o in parts.items() if k.startswith("RelationshipTypes/") and k.endswith("definition.json")}
+    for k, ctx in parts.items():
+        if "/Contextualizations/" in k:
+            rel = rels[k.split("/")[1]]
+            assert len(ctx["targetKeyRefBindings"]) == len(ents[rel["target"]["entityTypeId"]]["entityIdParts"])
+
+
+def test_export_refuses_bad_contextualization():
+    import pytest
+    g = _g({"A": (["K1", "K2"], []), "B": (["Z"], ["K1"])})
+    g.add_edge("B", "A", field="K1", kind="INFERRED")               # B lacks K2: cannot cover A's key
+    with pytest.raises(ValueError, match="cannot map target key part K2"):
+        fabric_iq_definition(g, "t", "ws", "lh")
