@@ -33,19 +33,31 @@ def test_mermaid_renders():
 
 def test_fabric_iq_envelope():
     g = build_graph(load_dd(DD))
-    env = fabric_iq_definition(g, "SAP test", "ws-1", "lh-1")
+    env = fabric_iq_definition(g, "SAP_test", "ws-1", "lh-1")
     assert env["type"] == "Ontology"
     paths = [p["path"] for p in env["definition"]["parts"]]
     assert ".platform" in paths and "definition.json" in paths
     assert sum(p.startswith("EntityTypes/") and p.endswith("definition.json") for p in paths) == 8
-    assert sum(p.startswith("RelationshipTypes/") for p in paths) == 7
-    ent = next(json.loads(base64.b64decode(p["payload"])) for p in env["definition"]["parts"]
-               if p["path"].startswith("EntityTypes/") and p["path"].endswith("definition.json")
-               and json.loads(base64.b64decode(p["payload"]))["name"] == "VBAP")
+    assert sum(p.startswith("RelationshipTypes/") and p.endswith("definition.json") for p in paths) == 7
+    assert sum("/Contextualizations/" in p for p in paths) == 7
+    parts = {p["path"]: json.loads(base64.b64decode(p["payload"])) for p in env["definition"]["parts"]}
+    ent = next(o for k, o in parts.items() if k.startswith("EntityTypes/") and k.endswith("definition.json") and o["name"] == "VBAP")
     names = {p["name"]: p["valueType"] for p in ent["properties"]}
     assert names["KWMENG"] == "Double" and names["VBELN"] == "String"
-    assert len(ent["keyPropertyIds"]) == 2
-    assert all(i > 0 for i in ent["keyPropertyIds"])
+    assert len(ent["entityIdParts"]) == 2 and all(isinstance(i, str) and int(i) > 0 for i in ent["entityIdParts"])
+    assert isinstance(ent["id"], str) and isinstance(ent["displayNamePropertyId"], str)
+    assert ent["namespace"] == "usertypes" and ent["namespaceType"] == "Custom" and ent["visibility"] == "Visible" and ent["baseEntityTypeId"] is None
+    bpath, binding = next((k, o) for k, o in parts.items() if k.startswith(f"EntityTypes/{ent['id']}/DataBindings/"))
+    import uuid as _u
+    _u.UUID(binding["id"]); _u.UUID(bpath.rsplit("/", 1)[1].removesuffix(".json"))   # GUID id and file name
+    cfg = binding["dataBindingConfiguration"]
+    assert all(isinstance(b["targetPropertyId"], str) for b in cfg["propertyBindings"])
+    assert cfg["dataBindingType"] == "NonTimeSeries" and cfg["sourceTableProperties"]["sourceType"] == "LakehouseTable"
+    assert cfg["sourceTableProperties"]["sourceTableName"] == "VBAP"          # real name, not lower-cased
+    assert {b["sourceColumnName"] for b in cfg["propertyBindings"]} == set(names)
+    ctx = next(o for k, o in parts.items() if "/Contextualizations/" in k and o["dataBindingTable"]["sourceTableName"] == "VBAP")
+    assert ctx["sourceKeyRefBindings"][0]["sourceColumnName"] == "VBELN"
+    assert len(ctx["targetKeyRefBindings"]) == 1
 
 
 def test_ids_are_deterministic():
@@ -64,3 +76,11 @@ def test_graph_db_exports():
     assert nodes.splitlines()[0] == "name:ID,text,keys,n_fields:int,:LABEL" and "VBAP,VBAK," in rels
     k = kql_graph(g)
     assert "make-graph src --> dst" in k and '"name":"VBAK"' in k
+
+
+def test_item_name_validation():
+    import pytest
+    g = build_graph(load_dd(DD))
+    with pytest.raises(ValueError, match="letters, digits and underscores"):
+        fabric_iq_definition(g, "SAP Sales", "ws", "lh")
+    fabric_iq_definition(g, "SAP_Sales_01", "ws", "lh")

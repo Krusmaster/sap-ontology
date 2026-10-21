@@ -1,0 +1,62 @@
+# Standard S/4HANA CDS view relationships that key-name inference cannot find, because CDS names
+# foreign keys by ROLE (SoldToParty) rather than by the target's key (Customer).
+# Generic SAP knowledge, no customer content. Entries whose tables are not in your lakehouse are
+# ignored. Review, trim, and add your own. action: add = create the edge if absent.
+#
+# Sales
+- {from: I_SALESDOCUMENT,        to: I_CUSTOMER,              field: SOLDTOPARTY,            action: add}
+- {from: I_SALESDOCUMENT,        to: I_SALESORGANIZATION,     field: SALESORGANIZATION,      action: add}
+- {from: I_SALESDOCUMENT,        to: I_DISTRIBUTIONCHANNEL,   field: DISTRIBUTIONCHANNEL,    action: add}
+- {from: I_SALESDOCUMENT,        to: I_DIVISION,              field: ORGANIZATIONDIVISION,   action: add}
+- {from: I_SALESDOCUMENT,        to: I_SALESDOCUMENTTYPE,     field: SALESDOCUMENTTYPE,      action: add}
+- {from: I_SALESDOCUMENTITEM,    to: I_PRODUCT,               field: MATERIAL,               action: add}
+- {from: I_SALESDOCUMENTITEM,    to: I_PLANT,                 field: PRODUCTIONPLANT,        action: add}
+- {from: I_SALESDOCUMENTITEM,    to: I_STORAGELOCATION,       field: STORAGELOCATION,        action: add}
+- {from: I_SALESDOCUMENTPARTNER, to: I_CUSTOMER,              field: CUSTOMER,               action: add}
+- {from: I_BILLINGDOCUMENT,      to: I_CUSTOMER,              field: SOLDTOPARTY,            action: add}
+- {from: I_BILLINGDOCUMENT,      to: I_SALESORGANIZATION,     field: SALESORGANIZATION,      action: add}
+- {from: I_BILLINGDOCUMENTITEM,  to: I_PRODUCT,               field: MATERIAL,               action: add}
+- {from: I_BILLINGDOCUMENTITEM,  to: I_PLANT,                 field: PLANT,                  action: add}
+- {from: I_OUTBOUNDDELIVERYITEM, to: I_PRODUCT,               field: MATERIAL,               action: add}
+- {from: I_OUTBOUNDDELIVERYITEM, to: I_PLANT,                 field: PLANT,                  action: add}
+# Procurement
+- {from: I_PURCHASEORDER,        to: I_SUPPLIER,              field: SUPPLIER,               action: add}
+- {from: I_PURCHASEORDER,        to: I_PURCHASINGORGANIZATION, field: PURCHASINGORGANIZATION, action: add}
+- {from: I_PURCHASEORDER,        to: I_COMPANYCODE,           field: COMPANYCODE,            action: add}
+- {from: I_PURCHASEORDERITEM,    to: I_PRODUCT,               field: MATERIAL,               action: add}
+- {from: I_PURCHASEORDERITEM,    to: I_PLANT,                 field: PLANT,                  action: add}
+- {from: I_PURCHASEORDERITEM,    to: I_STORAGELOCATION,       field: STORAGELOCATION,        action: add}
+- {from: I_PURCHASEREQUISITIONITEM, to: I_PRODUCT,            field: MATERIAL,               action: add}
+- {from: I_SUPPLIERINVOICE,      to: I_SUPPLIER,              field: INVOICINGPARTY,         action: add}
+# Inventory / logistics
+- {from: I_MATERIALDOCUMENTITEM, to: I_PRODUCT,               field: MATERIAL,               action: add}
+- {from: I_MATERIALDOCUMENTITEM, to: I_PLANT,                 field: PLANT,                  action: add}
+- {from: I_MATERIALDOCUMENTITEM, to: I_STORAGELOCATION,       field: STORAGELOCATION,        action: add}
+- {from: I_MATERIALSTOCK,        to: I_PRODUCT,               field: MATERIAL,               action: add}
+- {from: I_PRODUCTPLANTBASIC,    to: I_PRODUCT,               field: PRODUCT,                action: add}
+- {from: I_PRODUCTPLANTBASIC,    to: I_PLANT,                 field: PLANT,                  action: add}
+# Organisation
+- {from: I_PLANT,                to: I_COMPANYCODE,           field: COMPANYCODE,            action: add}
+- {from: I_STORAGELOCATION,      to: I_PLANT,                 field: PLANT,                  action: add}
+- {from: I_SALESORGANIZATION,    to: I_COMPANYCODE,           field: COMPANYCODE,            action: add}
+- {from: I_PURCHASINGORGANIZATION, to: I_COMPANYCODE,         field: COMPANYCODE,            action: add}
+- {from: I_COMPANYCODE,          to: I_CONTROLLINGAREA,       field: CONTROLLINGAREA,        action: add}
+# Finance / controlling
+- {from: I_COSTCENTER,           to: I_COMPANYCODE,           field: COMPANYCODE,            action: add}
+- {from: I_COSTCENTER,           to: I_PROFITCENTER,          field: PROFITCENTER,           action: add}
+- {from: I_COSTCENTER,           to: I_BUSINESSAREA,          field: BUSINESSAREA,           action: add}
+- {from: I_PROFITCENTER,         to: I_CONTROLLINGAREA,       field: CONTROLLINGAREA,        action: add}
+- {from: I_JOURNALENTRYITEM,     to: I_COMPANYCODE,           field: COMPANYCODE,            action: add}
+- {from: I_JOURNALENTRYITEM,     to: I_GLACCOUNTINCHARTOFACCOUNTS, field: GLACCOUNT,         action: add}
+- {from: I_JOURNALENTRYITEM,     to: I_COSTCENTER,            field: COSTCENTER,             action: add}
+- {from: I_JOURNALENTRYITEM,     to: I_PROFITCENTER,          field: PROFITCENTER,           action: add}
+- {from: I_JOURNALENTRYITEM,     to: I_CUSTOMER,              field: CUSTOMER,               action: add}
+- {from: I_JOURNALENTRYITEM,     to: I_SUPPLIER,              field: SUPPLIER,               action: add}
+# Master data
+- {from: I_CUSTOMER,             to: I_CUSTOMERACCOUNTGROUP,  field: CUSTOMERACCOUNTGROUP,   action: add}
+- {from: I_CUSTOMERSALESAREA,    to: I_CUSTOMER,              field: CUSTOMER,               action: add}
+- {from: I_CUSTOMERSALESAREA,    to: I_SALESORGANIZATION,     field: SALESORGANIZATION,      action: add}
+- {from: I_SUPPLIERPURCHASINGORG, to: I_SUPPLIER,             field: SUPPLIER,               action: add}
+- {from: I_PRODUCT,              to: I_PRODUCTGROUP,          field: PRODUCTGROUP,           action: add}
+- {from: I_PRODUCT,              to: I_PRODUCTTYPE,           field: PRODUCTTYPE,            action: add}
+- {from: I_BUSINESSPARTNER,      to: I_BUSINESSPARTNERTYPE,   field: BUSINESSPARTNERTYPE,    action: add}

@@ -1,12 +1,12 @@
 [project]
 name = "sap-ontology"
-version = "0.1.0"
+version = "0.2.0"
 description = "SAP Data Dictionary -> graph -> Fabric IQ ontology, in one command"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [{ name = "Gustav Kruse" }]
-dependencies = ["pandas>=2.0", "networkx>=3.0"]
+dependencies = ["pandas>=2.0", "networkx>=3.0", "pyyaml>=6"]
 keywords = ["sap", "microsoft-fabric", "ontology", "data-engineering", "fabric-iq"]
 
 [project.optional-dependencies]
@@ -22,3 +22,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["sap_ontology*"]
+
+[tool.setuptools.package-data]
+sap_ontology = ["data/*.yaml"]
