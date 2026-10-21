@@ -110,6 +110,7 @@ def from_dd03nd(
     """
     dd = normalise_dd03nd(dd03nd)
     rep = match_tables(lakehouse_tables, dd, strip_suffix, name_map)
+    raw_columns = {k.upper(): list(v.keys()) for k, v in (spark_schemas or {}).items()}   # as the endpoint has them
     spark_schemas = {k.upper(): {c.upper(): t for c, t in v.items()} for k, v in (spark_schemas or {}).items()}
     custom_keys = {k.upper(): [c.upper() for c in v] for k, v in (custom_keys or {}).items()}
 
@@ -126,7 +127,7 @@ def from_dd03nd(
                 "LENG": int(getattr(r, "LENG", 0) or 0), "DECIMALS": int(getattr(r, "DECIMALS", 0) or 0),
             })
         keys = [f["FIELDNAME"] for f in fields if f["KEYFLAG"] == "X"]
-        g.add_node(table, text="", keys=keys, fields=fields, source="dd03nd", view=view)
+        g.add_node(table, text="", keys=keys, fields=fields, source="dd03nd", view=view, columns=raw_columns.get(table))
 
     for table in rep.unmatched_tables:
         schema = spark_schemas.get(table)
@@ -135,7 +136,8 @@ def from_dd03nd(
         fields = [{"FIELDNAME": c, "POSITION": i, "KEYFLAG": "X" if c in custom_keys.get(table, []) else "",
                    "DATATYPE": _spark_to_dd(t), "LENG": 0, "DECIMALS": 0}
                   for i, (c, t) in enumerate(schema.items(), 1) if c not in TECH_COLS]
-        g.add_node(table, text="", keys=custom_keys.get(table, []), fields=fields, source="spark", view=None)
+        g.add_node(table, text="", keys=custom_keys.get(table, []), fields=fields, source="spark", view=None,
+                   columns=raw_columns.get(table))
     return g, rep
 
 

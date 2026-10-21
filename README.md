@@ -14,7 +14,9 @@ header? what do I join on?* Weeks of translation before any engineering starts.
 - **graph-database exports** — GraphML (Gephi, yEd, Neo4j), Neo4j CSV for `neo4j-admin import`,
   and a KQL `make-graph` snippet for Fabric Eventhouse,
 - a **Fabric IQ Ontology** item definition — entity types, keys, typed properties,
-  relationships, data bindings to the mirrored lakehouse tables — ready to create with one command.
+  relationships, data bindings to the mirrored lakehouse tables — ready to create with one command,
+- an **API for GraphQL** item definition from the same graph, so apps (e.g. Lovable's Fabric
+  connector) get the tables *with* relationships without configuring them by hand.
 
 ```
 sap-ontology objects  ./dd          # which header/item business objects exist?
@@ -89,6 +91,40 @@ creates no new Lakehouse or GraphModel; ids are deterministic, so entities keep 
 *Status (v0.2): this cell ran end-to-end in a Fabric sandbox on synthetic fixtures, including the
 `updateDefinition` path on re-run. The inference rules were cross-checked against a live S/4
 mirror's metadata; the package itself has not run against a live mirror.*
+
+## Same graph, second consumer: API for GraphQL (for apps)
+
+The Ontology item feeds Fabric IQ. Apps — Lovable's Fabric connector, any GraphQL client — use a
+Fabric **API for GraphQL** item instead, and that item needs the same configuration: which tables,
+which keys, which relationships. One more call gives you both from one graph:
+
+```python
+from sap_ontology.cli import deploy, default_token_provider
+headers = {"Authorization": f"Bearer {default_token_provider()()}"}
+sql_ep = so.sql_endpoint_id_for_lakehouse(WORKSPACE_ID, LAKEHOUSE_ID, headers)   # GraphQL reads a lakehouse via its SQL endpoint
+
+gql = so.fabric_graphql_definition(h, "SAP_Mirror_GraphQL", WORKSPACE_ID, sql_ep)
+print(deploy(gql, WORKSPACE_ID))
+```
+
+What it emits: one `graphqlType` per table with every endpoint column mapped (the mirror's
+`__sequence_number`/`__timestamp` become `sequence_number`/`timestamp`, GraphQL reserves `__`),
+`Query` + `Query_by_pk` (lakehouse and mirrored sources are read-only through GraphQL;
+`writable=True` adds Create/Update on Warehouse/SQL sources), a `ManyToOne` relationship per graph
+edge plus its `OneToMany` reverse, `header`/`<item>_lines` for header/item pairs, and
+`master`/`*_texts` for text views. Entities without keys are skipped. Query fields are named
+`i_<TYPE>s`, e.g. `i_CUSTOMERs`.
+
+Then in Lovable: Integrations → Microsoft Fabric → the item's `/graphql` URL + a service principal
+with *Run Queries and Mutations* on the item and introspection enabled. Both of those are portal
+clicks — introspection is off by default and the definition has no flag for it.
+
+*Status (2026-10-21): ran end to end in a Fabric sandbox on synthetic fixtures. The item was created,
+updated in place on the second run, and nested queries across the inferred relationships returned
+rows — customer → orders, item → product, text view → main view, two hops, header ↔ lines. Four
+corrections to the documented definition came out of that run and are in the code: no `format`
+key, `targetObject` is the target's `sourceObject`, every endpoint column must be mapped, and a
+relationship field cannot be called `items`. A failed create locks the item name for a few minutes.*
 
 ## Two kinds of input
 

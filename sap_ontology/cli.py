@@ -19,6 +19,7 @@ from pathlib import Path
 
 from .dd import build_graph, load_dd, suggest_business_objects
 from .mirror import from_dd03nd, infer_edges, match_tables
+from .graphql import fabric_graphql_definition
 from .export import fabric_iq_definition, graphml, kql_graph, mermaid, neo4j_csv
 
 FABRIC = "https://api.fabric.microsoft.com"
@@ -115,13 +116,16 @@ def deploy(definition: dict, workspace: str, token_provider=None, poll_seconds: 
     token = (token_provider or default_token_provider())()
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-    existing = find_item(workspace, definition["displayName"], headers) if update_existing else None
+    item_type = definition.get("type", "Ontology")
+    existing = find_item(workspace, definition["displayName"], headers, item_type) if update_existing else None
     if existing:
         r = requests.post(f"{FABRIC}/v1/workspaces/{workspace}/items/{existing}/updateDefinition",
                           headers=headers, json={"definition": definition["definition"]}, timeout=60)
         mode = "updated"
     else:
-        r = requests.post(f"{FABRIC}/v1/workspaces/{workspace}/items", headers=headers, json=definition, timeout=60)
+        route = {"GraphQLApi": "graphQLApis"}.get(item_type, "items")
+        body = definition if route == "items" else {k: v for k, v in definition.items() if k != "type"}
+        r = requests.post(f"{FABRIC}/v1/workspaces/{workspace}/{route}", headers=headers, json=body, timeout=60)
         mode = "created"
 
     if r.status_code not in (200, 201, 202):
@@ -136,6 +140,19 @@ def deploy(definition: dict, workspace: str, token_provider=None, poll_seconds: 
             return s
         time.sleep(poll_seconds)
     return {"status": "Timeout", "mode": mode, "operation": op}
+
+
+def cmd_graphql(a: argparse.Namespace) -> int:
+    """Classic DD input -> API for GraphQL item definition (mirror input: use the library, see README)."""
+    g = build_graph(load_dd(a.dd), _tables(a.tables))
+    env = fabric_graphql_definition(g, a.name, a.workspace, a.source_item, source_type=a.source_type, schema=a.schema,
+                                    writable=a.writable)
+    for t in env.get("skipped", []):
+        print(f"  skipped (no keys): {t}")
+    Path(a.out).write_text(json.dumps(env, indent=2), encoding="utf-8")
+    n = len(json.loads(__import__("base64").b64decode(env["definition"]["parts"][0]["payload"]))["datasources"][0]["objects"])
+    print(f"wrote {a.out}: {n} types")
+    return 0
 
 
 def cmd_deploy(a: argparse.Namespace) -> int:
@@ -213,6 +230,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--mermaid"); p.add_argument("--out"); p.add_argument("--name")
     p.add_argument("--workspace"); p.add_argument("--lakehouse")
     p.set_defaults(fn=cmd_mirror)
+
+    p = sub.add_parser("graphql", help="write a Fabric API for GraphQL item definition")
+    p.add_argument("dd"); p.add_argument("--tables")
+    p.add_argument("--name", required=True); p.add_argument("--workspace", required=True)
+    p.add_argument("--source-item", required=True, help="SQL analytics endpoint id (lakehouse) or warehouse/SQL db item id")
+    p.add_argument("--source-type", default="SqlAnalyticsEndpoint", choices=["SqlAnalyticsEndpoint", "Warehouse", "SqlDbNative", "AzureSql"])
+    p.add_argument("--schema", default="dbo"); p.add_argument("--writable", action="store_true")
+    p.add_argument("--out", default="graphql.json")
+    p.set_defaults(fn=cmd_graphql)
 
     p = sub.add_parser("deploy", help="POST the definition to a Fabric workspace (notebookutils in Fabric, az locally)")
     p.add_argument("definition"); p.add_argument("--workspace", required=True)
