@@ -144,7 +144,7 @@ def cmd_mirror(a: argparse.Namespace) -> int:
     if a.out:
         if not (a.workspace and a.lakehouse):
             print("--out needs --workspace and --lakehouse", file=sys.stderr); return 2
-        env = fabric_iq_definition(h, a.name or "SAP Mirror", a.workspace, a.lakehouse)
+        env = fabric_iq_definition(h, a.name or "SAP_Mirror", a.workspace, a.lakehouse)
         for t in env.get("skipped", []):
             print(f"  skipped (no keys, add to --custom-keys): {t}")
         Path(a.out).write_text(json.dumps(env, indent=2), encoding="utf-8"); print(f"wrote {a.out}")

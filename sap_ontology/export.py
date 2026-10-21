@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import uuid
 
 import networkx as nx
@@ -21,10 +22,24 @@ _TYPE_MAP = {
 }
 
 
-def _id64(*parts: str) -> int:
-    """Deterministic positive int64 from names, so re-runs produce the same ids."""
+def _id64(*parts: str) -> str:
+    """Deterministic positive int64 from names, AS A STRING: Fabric's importer refuses JSON numbers
+    for id fields ("The JSON value could not be converted to System.String. Path: $.id")."""
     h = hashlib.sha256("|".join(parts).encode()).digest()
-    return int.from_bytes(h[:8], "big") & 0x7FFFFFFFFFFFFFFF or 1
+    return str(int.from_bytes(h[:8], "big") & 0x7FFFFFFFFFFFFFFF or 1)
+
+
+def _guid(*parts: str) -> str:
+    """Deterministic GUID for data bindings and contextualizations (Fabric expects GUID ids there)."""
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, "|".join(parts)))
+
+
+_NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
+
+
+def valid_item_name(name: str) -> bool:
+    """Fabric refuses Ontology item names with anything but letters, digits and underscores."""
+    return bool(_NAME_RE.match(name))
 
 
 def value_type(sap_datatype: str) -> str:
@@ -58,7 +73,9 @@ def fabric_iq_definition(
 ) -> dict:
     """Build the item-definition envelope for POST /v1/workspaces/{ws}/items.
 
-    Shape follows a definition Fabric accepted and returned via Get Item Definition (2026-10):
+    Shape follows a definition Fabric accepted on create and returned via Get Item Definition
+    (2026-10): all ids are STRINGS (int64 as text for entity/property/relationship ids, GUIDs for
+    bindings and contextualizations); 2- and 3-part entityIdParts are accepted.
     - EntityTypes/<id>/definition.json: entityIdParts, namespace "usertypes", namespaceType "Custom",
       visibility "Visible", baseEntityTypeId null, properties[], timeseriesProperties[]
     - EntityTypes/<id>/DataBindings/<id>.json: {id, dataBindingConfiguration{dataBindingType,
@@ -75,6 +92,8 @@ def fabric_iq_definition(
     accepts 2–3 part keys is not yet verified.
     """
     skipped: list[str] = []
+    if not valid_item_name(display_name):
+        raise ValueError(f"item name {display_name!r}: Fabric allows only letters, digits and underscores (e.g. SAP_Sales)")
     table_name_map = table_name_map or {}
     parts: list[dict] = []
 
@@ -120,7 +139,7 @@ def fabric_iq_definition(
             "properties": props,
             "timeseriesProperties": [],
         })
-        bid = _id64("binding", table)
+        bid = _guid("binding", table)
         add(f"EntityTypes/{eid}/DataBindings/{bid}.json", {
             "id": bid,
             "dataBindingConfiguration": {
@@ -147,7 +166,7 @@ def fabric_iq_definition(
         src_keys = g.nodes[a].get("keys", [])
         tgt_keys = g.nodes[b].get("keys", [])
         ref_cols = [c.strip() for c in field.split(",") if c.strip()] or tgt_keys
-        cid = _id64("ctx", a, b, field)
+        cid = _guid("ctx", a, b, field)
         add(f"RelationshipTypes/{rid}/Contextualizations/{cid}.json", {
             "id": cid,
             "dataBindingTable": table_props(a),

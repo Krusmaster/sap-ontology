@@ -101,7 +101,7 @@ def test_relationships_yaml_add_and_drop():
 def test_ontology_from_mirror_graph():
     g, _ = from_dd03nd(dd(), LAKEHOUSE, strip_suffix=True)
     h, _ = infer_edges(g, confirmed=yaml.safe_load((DD / "relationships.yaml").read_text()))
-    env = fabric_iq_definition(h, "mirror test", "ws", "lh")
+    env = fabric_iq_definition(h, "mirror_test", "ws", "lh")
     paths = [p["path"] for p in env["definition"]["parts"]]
     assert sum(p.startswith("RelationshipTypes/") and p.endswith("definition.json") for p in paths) == h.number_of_edges() >= 3
     assert sum("/Contextualizations/" in p for p in paths) == h.number_of_edges()
@@ -218,3 +218,21 @@ def test_keyless_entity_is_skipped_and_catalog_name_used():
     assert not any(k.startswith("RelationshipTypes/") for k in parts)        # edge to a skipped entity dropped
     b = next(v for k, v in parts.items() if "/DataBindings/" in k)
     assert b["dataBindingConfiguration"]["sourceTableProperties"]["sourceTableName"] == "i_product"
+
+
+def test_text_views_never_source_or_target_even_without_master():
+    g = _g({
+        "I_CONTROLLINGAREA": (["CONTROLLINGAREA"], []),
+        "I_COSTCENTER": (["CONTROLLINGAREA", "COSTCENTER", "VALIDITYENDDATE"], []),
+        "I_COSTCENTERTEXT": (["COSTCENTER", "CONTROLLINGAREA", "LANGUAGE", "VALIDITYENDDATE"], []),
+        "I_PRODUCTDESCRIPTION": (["PRODUCT", "LANGUAGE"], []),          # master I_PRODUCT not replicated
+        "I_SALESDOCUMENTITEM": (["SALESDOCUMENT", "SALESDOCUMENTITEM"], ["PRODUCT"]),
+    })
+    h, amb = infer_edges(g)
+    edges = {(a, b) for a, b in h.edges}
+    assert ("I_COSTCENTERTEXT", "I_COSTCENTER") in edges                   # TEXT_OF stays
+    assert ("I_COSTCENTERTEXT", "I_CONTROLLINGAREA") not in edges           # text view is never a reference source
+    assert ("I_COSTCENTER", "I_CONTROLLINGAREA") in edges                   # the master keeps it
+    assert not any(b == "I_PRODUCTDESCRIPTION" for _, b in edges)          # never a target, even with no master
+    assert not any(a == "I_PRODUCTDESCRIPTION" for a, _ in edges)
+    assert amb == []

@@ -19,7 +19,7 @@ header? what do I join on?* Weeks of translation before any engineering starts.
 ```
 sap-ontology objects  ./dd          # which header/item business objects exist?
 sap-ontology graph    ./dd --mermaid sap.mmd --graphml sap.graphml --neo4j ./neo4j --kql sap.kql
-sap-ontology ontology ./dd --name "SAP Sales" --workspace <ws-id> --lakehouse <lh-id>
+sap-ontology ontology ./dd --name SAP_Sales --workspace <ws-id> --lakehouse <lh-id>
 sap-ontology deploy   ontology.json --workspace <ws-id>     # az login first
 ```
 
@@ -65,7 +65,7 @@ g, report = so.from_lakehouse(spark, schema="dbo", strip_suffix=True,
 print(report.summary())            # exact / via suffix / via map / unmatched (custom Z/Y)
 h, ambiguous = so.infer_edges(g, confirmed=yaml.safe_load(open("relationships.yaml")))
 print(so.suggest_business_objects(h))
-env = so.fabric_iq_definition(h, "SAP Sales", workspace_id, lakehouse_id)
+env = so.fabric_iq_definition(h, "SAP_Sales", workspace_id, lakehouse_id)
 ```
 
 What the adapter does, and does not do:
@@ -89,9 +89,10 @@ What the adapter does, and does not do:
   `LANGUAGE` as a plain column does not point at other entities' texts. Multi-column keys are
   compared as sets. Edges to the language table itself are dropped by default
   (`--include-text-key-edges` to keep them) — on a real S/4 mirror they were a quarter of all edges.
+  A text view whose master is not replicated (`I_PRODUCTDESCRIPTION` with no `I_PRODUCT`) is still
+  a text view: it is never the source or the target of a reference edge.
 - **Entities without keys** (custom views with no `custom_keys`) are skipped from the ontology and
-  listed under `skipped`; Fabric needs `entityIdParts`. Whether Fabric accepts 2–3 part keys is
-  not verified yet.
+  listed under `skipped`; Fabric needs `entityIdParts`. 2- and 3-part keys are accepted.
 - **Bindings use the name the Spark catalog lists** (`catalog_name`): upper case on a mirror,
   lower case when Spark wrote the table. Override per table with `table_name_map`.
 - **Custom Z/Y views**: name inference finds almost nothing there. `custom_keys` +
@@ -110,9 +111,13 @@ sap-ontology mirror DD03ND.csv tables.txt --strip-suffix --custom-keys keys.yaml
 inside a Fabric notebook, `az account get-access-token` locally. Pass your own `token_provider`
 to `sap_ontology.cli.deploy()` for anything else.
 
-**Creating an Ontology item can also create companion items** in the workspace — an Eventhouse,
-a KQL database and a graph model were observed. Deploy to a sandbox workspace first, never
-straight into a shared DEV.
+**Every create — including a failed import — creates companion items** in the workspace: a
+Lakehouse (`<name>_lh_<guid>`) with its SQL endpoint, and a GraphModel (`<name>_graph_<guid>`).
+No Eventhouse or KQL database (an earlier note said so; corrected after testing). A failed
+import leaves the three behind, so deploy to a sandbox workspace and clean up after failures.
+
+**Item name:** letters, digits and underscores only (`SAP_Sales`, not `SAP Sales`).
+`fabric_iq_definition` refuses anything else before you hit Fabric's `BadArtifactCreateRequest`.
 
 **Open question:** whether a data binding may point at a *mirrored database's* tables directly
 or needs a lakehouse shortcut. Not verified yet; the binding currently targets a lakehouse item id.
@@ -127,7 +132,10 @@ that Fabric **accepted and returned via Get Item Definition** (October 2026): `e
 namespace `usertypes` / `namespaceType Custom`, `dataBindingConfiguration` with
 `sourceTableProperties`, and a `Contextualizations/` file per relationship type mapping source
 keys and referencing columns. Without contextualizations, relationship types link nothing.
-Creating the item from this output has not been run yet — that is the next sandbox test.
+**Verified 2026-10-21:** an Ontology item was created from this output in a sandbox workspace —
+11 entities (2- and 3-part keys accepted), 11 bindings, 9 relationship types with 9
+contextualizations (a 3-column source key onto a 2-column target accepted). Two things the first
+attempts taught: ids must be JSON strings, and item names may not contain spaces.
 
 ## Works on
 

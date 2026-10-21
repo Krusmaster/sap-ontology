@@ -220,10 +220,11 @@ def infer_edges(
 
     h = g.copy()
 
-    # (1) text views, any key order
-    text_views: set[str] = set()
+    # (1) text views, any key order. Any table whose key holds a text key IS a text view, with or
+    #     without a master in the lakehouse: never the source or the target of a reference edge.
+    text_views: set[str] = {a for a, ka in keys.items() if set(ka) & text_keys and len(ka) > 1}
     for a, ka in keys.items():
-        if not (set(ka) & text_keys):
+        if a not in text_views:
             continue
         masters = [b for b, kb in keys.items() if b != a and is_text_view(ka, kb, text_keys)]
         if len(masters) == 1:
@@ -249,14 +250,12 @@ def infer_edges(
             continue                                      # references point to the master, not its text
         ka = keys[a]
         for b in g.nodes:
-            if b == a or not key <= cols[b]:
-                continue
+            if b == a or b in text_views or not key <= cols[b]:
+                continue                                  # a text view is never the source of a reference
             if frozenset(keys[b]) == key:
                 continue                                  # same key: 1:1 extension, not a reference
             if is_item_of(keys[b], ka, single_keys - set(ka), text_keys):
                 continue                                  # header/item, handled elsewhere
-            if b in text_views and h.has_edge(b, a):
-                continue                                  # already TEXT_OF
             if not h.has_edge(b, a):
                 h.add_edge(b, a, field=",".join(ka), kind="INFERRED", inferred=True,
                            reason=f"{b} carries key of {a} ({','.join(ka)})")
