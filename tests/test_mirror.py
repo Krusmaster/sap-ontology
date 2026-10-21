@@ -166,3 +166,55 @@ def test_text_view_direction_and_language_noise():
     assert h2.has_edge("I_COSTCENTER", "I_LANGUAGE")                        # opt-in keeps them
     s = {x["object"]: x for x in suggest_business_objects(h)}
     assert "I_COSTCENTERTEXT" not in s.get("I_COSTCENTER", {}).get("items", [])  # text view is not an item
+
+
+def test_text_views_real_sap_key_orders():
+    g = _g({
+        "I_LANGUAGE": (["LANGUAGE"], []),
+        "I_COSTCENTER": (["CONTROLLINGAREA", "COSTCENTER", "VALIDITYENDDATE"], ["LANGUAGE", "BUSINESSAREA", "PROFITCENTER"]),
+        "I_COSTCENTERTEXT": (["COSTCENTER", "CONTROLLINGAREA", "LANGUAGE", "VALIDITYENDDATE"], ["COSTCENTERNAME"]),   # text key in the middle, different order
+        "I_PROFITCENTER": (["CONTROLLINGAREA", "PROFITCENTER", "VALIDITYENDDATE"], ["LANGUAGE"]),
+        "I_PROFITCENTERTEXT": (["LANGUAGE", "CONTROLLINGAREA", "PROFITCENTER", "VALIDITYENDDATE"], []),            # text key first
+        "I_BUSINESSAREA": (["BUSINESSAREA"], []),
+        "I_BUSINESSAREATEXT": (["BUSINESSAREA", "LANGUAGE"], []),
+        "I_PLANT": (["PLANT"], ["LANGUAGE", "SALESORGANIZATION", "DIVISION"]),
+        "I_DIVISION": (["DIVISION"], []),
+        "I_DIVISIONTEXT": (["DIVISION", "LANGUAGE"], []),
+        "I_SALESORGANIZATION": (["SALESORGANIZATION"], []),
+        "I_SALESORGANIZATIONTEXT": (["SALESORGANIZATION", "LANGUAGE"], []),
+    })
+    h, amb = infer_edges(g)
+    kinds = {(a, b): d["kind"] for a, b, d in h.edges(data=True)}
+    # (1) text views found regardless of key order / position of LANGUAGE
+    assert kinds[("I_COSTCENTERTEXT", "I_COSTCENTER")] == "TEXT_OF"
+    assert kinds[("I_PROFITCENTERTEXT", "I_PROFITCENTER")] == "TEXT_OF"
+    assert kinds[("I_BUSINESSAREATEXT", "I_BUSINESSAREA")] == "TEXT_OF"
+    # no reverse edges
+    assert ("I_COSTCENTER", "I_COSTCENTERTEXT") not in kinds and ("I_PROFITCENTER", "I_PROFITCENTERTEXT") not in kinds
+    # (2) masters carrying LANGUAGE as a non-key column never point at other entities' text views
+    for src in ("I_PLANT", "I_COSTCENTER", "I_PROFITCENTER"):
+        assert not any(b.endswith("TEXT") for a, b in kinds if a == src), f"{src} points at a text view"
+    # but their real references to masters remain
+    assert kinds[("I_PLANT", "I_DIVISION")] == "INFERRED" and kinds[("I_PLANT", "I_SALESORGANIZATION")] == "INFERRED"
+    assert kinds[("I_COSTCENTER", "I_BUSINESSAREA")] == "INFERRED"
+    # (3) multi-column key compared as a set: I_COSTCENTER -> I_PROFITCENTER (carries CONTROLLINGAREA, PROFITCENTER, VALIDITYENDDATE)
+    assert kinds[("I_COSTCENTER", "I_PROFITCENTER")] == "INFERRED"
+    assert amb == []
+    # (4) no text view is ever proposed as an item
+    s = {x["object"]: x for x in suggest_business_objects(h)}
+    assert "I_LANGUAGETEXT" not in s.get("I_LANGUAGE", {}).get("items", [])
+    assert all(not i.endswith("TEXT") for x in s.values() for i in x["items"])
+
+
+def test_keyless_entity_is_skipped_and_catalog_name_used():
+    g = _g({"I_PRODUCT": (["PRODUCT"], ["PRODUCTTYPE"]), "Z_CUSTOM_VIEW": ([], ["A", "B"])})
+    g.nodes["I_PRODUCT"]["catalog_name"] = "i_product"          # Spark-written lakehouse lists lower case
+    g.add_edge("Z_CUSTOM_VIEW", "I_PRODUCT", field="PRODUCT", kind="INFERRED")
+    env = fabric_iq_definition(g, "t", "ws", "lh")
+    assert env["skipped"] == ["Z_CUSTOM_VIEW"]
+    import base64, json
+    parts = {p["path"]: json.loads(base64.b64decode(p["payload"])) for p in env["definition"]["parts"]}
+    assert sum(k.startswith("EntityTypes/") and k.endswith("definition.json") for k in parts) == 1
+    assert not any(k.startswith("RelationshipTypes/") for k in parts)        # edge to a skipped entity dropped
+    b = next(v for k, v in parts.items() if "/DataBindings/" in k)
+    assert b["dataBindingConfiguration"]["sourceTableProperties"]["sourceTableName"] == "i_product"

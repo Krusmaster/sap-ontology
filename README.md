@@ -81,9 +81,19 @@ What the adapter does, and does not do:
   (single-column keys first). Every inferred edge is marked `inferred=True` with a reason.
   A column that is the key of two tables is reported as ambiguous, not guessed. A
   `relationships.yaml` can confirm, add, override or drop edges — see `examples/mirror/`.
-- **Text views** (`I_COSTCENTERTEXT` = `I_COSTCENTER` key + `LANGUAGE`) get a `TEXT_OF` edge to
-  their master, never the reverse. Edges to the language table itself are dropped by default
+- **Text views**: A is the text view of B when A's key contains a text key (`LANGUAGE`, `SPRAS`,
+  …) and, text keys removed, equals B's key *as a set* — any order, text key anywhere
+  (`I_COSTCENTERTEXT (COSTCENTER, CONTROLLINGAREA, LANGUAGE, VALIDITYENDDATE)` →
+  `I_COSTCENTER (CONTROLLINGAREA, COSTCENTER, VALIDITYENDDATE)`). Edge `TEXT_OF` to the master,
+  never the reverse, and **no reference edge ever targets a text view** — a master that carries
+  `LANGUAGE` as a plain column does not point at other entities' texts. Multi-column keys are
+  compared as sets. Edges to the language table itself are dropped by default
   (`--include-text-key-edges` to keep them) — on a real S/4 mirror they were a quarter of all edges.
+- **Entities without keys** (custom views with no `custom_keys`) are skipped from the ontology and
+  listed under `skipped`; Fabric needs `entityIdParts`. Whether Fabric accepts 2–3 part keys is
+  not verified yet.
+- **Bindings use the name the Spark catalog lists** (`catalog_name`): upper case on a mirror,
+  lower case when Spark wrote the table. Override per table with `table_name_map`.
 - **Custom Z/Y views**: name inference finds almost nothing there. `custom_keys` +
   `relationships.yaml` are the primary source for them, and will stay so until CDS associations
   reach the mirror (DD03ND carries none today).

@@ -91,6 +91,7 @@ def deploy(definition: dict, workspace: str, token_provider=None, poll_seconds: 
     """
     import requests  # optional dependency, only for deploy
 
+    definition = {k: v for k, v in definition.items() if k != "skipped"}
     token = (token_provider or default_token_provider())()
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     r = requests.post(f"{FABRIC}/v1/workspaces/{workspace}/items", headers=headers, json=definition, timeout=60)
@@ -144,6 +145,8 @@ def cmd_mirror(a: argparse.Namespace) -> int:
         if not (a.workspace and a.lakehouse):
             print("--out needs --workspace and --lakehouse", file=sys.stderr); return 2
         env = fabric_iq_definition(h, a.name or "SAP Mirror", a.workspace, a.lakehouse)
+        for t in env.get("skipped", []):
+            print(f"  skipped (no keys, add to --custom-keys): {t}")
         Path(a.out).write_text(json.dumps(env, indent=2), encoding="utf-8"); print(f"wrote {a.out}")
     return 0
 

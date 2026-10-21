@@ -145,7 +145,8 @@ def from_lakehouse(
     """Fabric entry point. Filters DD03ND to the lakehouse's tables in Spark before toPandas()."""
     from pyspark.sql import functions as F  # type: ignore
 
-    tables = [t.name.upper() for t in spark.catalog.listTables(schema) if t.name.upper() != dd03nd_table.upper()]
+    catalog_names = {t.name.upper(): t.name for t in spark.catalog.listTables(schema) if t.name.upper() != dd03nd_table.upper()}
+    tables = list(catalog_names)
     candidates = set(tables)
     if strip_suffix:
         candidates |= {SUFFIX_RE.sub("", t) for t in tables}
@@ -156,19 +157,29 @@ def from_lakehouse(
           .filter(F.col("_s").isin(list(candidates)))
           .drop("_s", "__sequence_number", "__timestamp")
           .toPandas())
-    schemas = {t: {f.name: f.dataType.simpleString() for f in spark.table(f"{schema}.{t}").schema.fields} for t in tables}
-    return from_dd03nd(dd, tables, spark_schemas=schemas, custom_keys=custom_keys, strip_suffix=strip_suffix, name_map=name_map)
-
-
-def is_item_of(b_keys: list[str], a_keys: list[str], other_single_keys: set[str]) -> bool:
-    """B is an item table of A when B's key = A's key + exactly one column, and that column is not
-    itself the single-column key of another table (then it is a reference, not an item number)."""
-    if len(b_keys) != len(a_keys) + 1 or b_keys[: len(a_keys)] != a_keys:
-        return False
-    return b_keys[-1] not in other_single_keys
+    schemas = {t: {f.name: f.dataType.simpleString() for f in spark.table(f"{schema}.{catalog_names[t]}").schema.fields} for t in tables}
+    g, rep = from_dd03nd(dd, tables, spark_schemas=schemas, custom_keys=custom_keys, strip_suffix=strip_suffix, name_map=name_map)
+    for t in g.nodes:                                   # bind to the name the catalog lists (Spark writes lower case)
+        g.nodes[t]["catalog_name"] = catalog_names.get(t, t)
+    return g, rep
 
 
 TEXT_KEYS = {"LANGUAGE", "SPRAS", "LANGU", "LANGUAGECODE"}
+
+
+def is_text_view(a_keys: list[str], b_keys: list[str], text_keys: set[str]) -> bool:
+    """A is the text view of B when A's key contains a text key and, text keys removed, equals B's key as a set."""
+    ka, kb = set(a_keys), set(b_keys)
+    return bool(ka & text_keys) and (ka - text_keys) == kb and kb and not (kb & text_keys)
+
+
+def is_item_of(b_keys: list[str], a_keys: list[str], other_single_keys: set[str], text_keys: set[str] = frozenset()) -> bool:
+    """B is an item table of A when B's key = A's key + exactly one column, and that column is neither
+    the single-column key of another table (reference) nor a text key (text view)."""
+    if len(b_keys) != len(a_keys) + 1 or b_keys[: len(a_keys)] != a_keys:
+        return False
+    extra = b_keys[-1]
+    return extra not in other_single_keys and extra not in text_keys
 
 
 def infer_edges(
@@ -180,19 +191,18 @@ def infer_edges(
 ) -> tuple[nx.DiGraph, list[dict]]:
     """Derive relationships from key structure when no foreign-key catalogue exists.
 
-    Rule: B -> A when B carries ALL of A's key columns (by name, case-insensitive).
-    Header/item pairs (B's key = A's key + one non-reference column) are NOT reference edges;
-    they are left to suggest_business_objects. A reference column that happens to be part of
-    B's key (PLANT in a (PLANT, STORAGELOCATION, PRODUCT) key) still yields an edge.
+    Rule: B -> A when B carries ALL of A's key columns (by name, case-insensitive, order ignored).
+    Header/item pairs (B's key = A's key + one non-reference, non-text column) are NOT reference
+    edges; they are left to suggest_business_objects. A reference column that happens to be part
+    of B's key still yields an edge.
 
-    Single-column keys first, then multi-column keys if include_multi_column_keys. Every inferred
-    edge is marked inferred=True with a reason. A key (single or multi) owned by two or more
-    tables is AMBIGUOUS: no edge, reported instead.
+    Text views: A is the text view of B when A's key contains a text key (LANGUAGE, SPRAS, ...)
+    and, text keys removed, equals B's key as a set — any order, text key anywhere. Edge A -> B
+    with kind TEXT_OF. No reference edge ever targets a text view: references point to the master.
+    Edges to the language table itself are dropped unless include_text_key_edges=True.
 
-    Text views: when A's key = B's key + a text key (LANGUAGE, SPRAS, ...), A is the text view of B.
-    Edge A -> B with kind TEXT_OF, never B -> A (a master view that happens to carry LANGUAGE must
-    not point at its own text view). Edges to the language table itself (key = text key) are noise
-    for a business graph and are dropped unless include_text_key_edges=True.
+    Multi-column keys are compared as sets. Every inferred edge is marked inferred=True with a
+    reason. A key owned by two or more tables is AMBIGUOUS: no edge, reported instead.
 
     confirmed: list of {"from": B, "to": A, "field": col, "action": "confirm"|"override"|"add"|"drop"}
                from a relationships YAML. Applied after inference; "drop" removes an inferred edge.
@@ -202,45 +212,51 @@ def infer_edges(
     cols = {n: {f["FIELDNAME"].upper() for f in d.get("fields", [])} for n, d in g.nodes(data=True)}
     ambiguous: list[dict] = []
 
-    owners: dict[tuple[str, ...], list[str]] = {}
+    owners: dict[frozenset, list[str]] = {}
     for n, k in keys.items():
         if k:
-            owners.setdefault(tuple(k), []).append(n)
-    single_keys = {k[0] for k in owners if len(k) == 1}
+            owners.setdefault(frozenset(k), []).append(n)
+    single_keys = {next(iter(k)) for k in owners if len(k) == 1}
 
     h = g.copy()
 
-    # text views first: A.keys = B.keys + text key  =>  A -text of-> B
-    text_of: dict[str, str] = {}
-    by_key = {tuple(k): n for n, k in keys.items() if k and len(owners.get(tuple(k), [])) == 1}
+    # (1) text views, any key order
+    text_views: set[str] = set()
     for a, ka in keys.items():
-        if len(ka) >= 2 and ka[-1] in text_keys:
-            b = by_key.get(tuple(ka[:-1]))
-            if b and b != a:
-                text_of[a] = b
-                h.add_edge(a, b, field=",".join(ka[:-1]), kind="TEXT_OF", inferred=True, reason=f"{a} is the text view of {b}")
+        if not (set(ka) & text_keys):
+            continue
+        masters = [b for b, kb in keys.items() if b != a and is_text_view(ka, kb, text_keys)]
+        if len(masters) == 1:
+            b = masters[0]
+            text_views.add(a)
+            h.add_edge(a, b, field=",".join(k for k in ka if k not in text_keys), kind="TEXT_OF",
+                       inferred=True, reason=f"{a} is the text view of {b}")
+        elif len(masters) > 1:
+            ambiguous.append({"column": ",".join(ka), "owners": sorted(masters), "reason": f"text view {a} matches several masters"})
 
-    ordered = sorted(owners.items(), key=lambda kv: len(kv[0]))
-    for key, tabs in ordered:
+    # (2)+(3) reference edges, keys as sets, never into a text view
+    for key, tabs in sorted(owners.items(), key=lambda kv: len(kv[0])):
         if len(key) > 1 and not include_multi_column_keys:
             continue
-        if len(key) == 1 and key[0] in text_keys and not include_text_key_edges:
-            continue                                      # edges to I_LANGUAGE etc.: noise
+        if len(key) == 1 and next(iter(key)) in text_keys and not include_text_key_edges:
+            continue
         if len(tabs) > 1:
-            ambiguous.append({"column": ",".join(key), "owners": sorted(tabs),
+            ambiguous.append({"column": ",".join(sorted(key)), "owners": sorted(tabs),
                               "reason": f"{'single' if len(key) == 1 else 'multi'}-column key of several tables"})
             continue
         a = tabs[0]
-        ka = list(key)
+        if a in text_views:
+            continue                                      # references point to the master, not its text
+        ka = keys[a]
         for b in g.nodes:
-            if b == a or not set(ka) <= cols[b]:
+            if b == a or not key <= cols[b]:
                 continue
-            if keys[b] == ka:
+            if frozenset(keys[b]) == key:
                 continue                                  # same key: 1:1 extension, not a reference
-            if is_item_of(keys[b], ka, single_keys - set(ka)):
+            if is_item_of(keys[b], ka, single_keys - set(ka), text_keys):
                 continue                                  # header/item, handled elsewhere
-            if text_of.get(a) == b or text_of.get(b) == a:
-                continue                                  # text view pair already linked A -> B
+            if b in text_views and h.has_edge(b, a):
+                continue                                  # already TEXT_OF
             if not h.has_edge(b, a):
                 h.add_edge(b, a, field=",".join(ka), kind="INFERRED", inferred=True,
                            reason=f"{b} carries key of {a} ({','.join(ka)})")

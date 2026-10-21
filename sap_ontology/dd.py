@@ -103,13 +103,14 @@ def suggest_business_objects(g: nx.DiGraph) -> list[dict]:
     Classic SAP: VBAK(VBELN) -> VBAP(VBELN, POSNR); EKKO(EBELN) -> EKPO(EBELN, EBELP).
     Returns one suggestion per header table with its item tables, longest chains first.
     """
+    from .mirror import TEXT_KEYS
     keys = {n: tuple(d["keys"]) for n, d in g.nodes(data=True) if d.get("keys")}
-    single_keys = {k[0] for k in keys.values() if len(k) == 1}
+    single_keys = {k[0] for k in keys.values() if len(k) == 1} | {t.upper() for t in TEXT_KEYS}
     suggestions = []
     for head, hk in keys.items():
         if not hk:
             continue
-        # item = header key + exactly one column that is NOT another table's key (else it is a reference)
+        # item = header key + exactly one column that is NOT another table's key nor a text key
         items = [t for t, tk in keys.items()
                  if t != head and len(tk) == len(hk) + 1 and tk[: len(hk)] == hk
                  and tk[-1] not in (single_keys - set(hk))]

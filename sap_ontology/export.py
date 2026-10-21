@@ -68,9 +68,13 @@ def fabric_iq_definition(
       source entity's own table (its key columns -> source entity key, referencing column(s) ->
       target entity key).
 
-    Table names are used as they are (mirrored SAP tables are upper case); override per table with
-    table_name_map. Each table becomes one entity type; each edge one relationship type.
+    Table names: node attribute `catalog_name` if present (what the Spark catalog lists — lower case
+    when Spark wrote the table, upper case on a mirror), else the node name; table_name_map overrides.
+    Entities without keys (custom views with no custom_keys) are SKIPPED and listed in
+    env["skipped"] — Fabric needs entityIdParts. Multi-part keys are emitted as-is; whether Fabric
+    accepts 2–3 part keys is not yet verified.
     """
+    skipped: list[str] = []
     table_name_map = table_name_map or {}
     parts: list[dict] = []
 
@@ -79,8 +83,9 @@ def fabric_iq_definition(
         parts.append({"path": path, "payload": payload, "payloadType": "InlineBase64"})
 
     def table_props(table: str) -> dict:
+        name = table_name_map.get(table) or g.nodes[table].get("catalog_name") or table
         return {"sourceType": "LakehouseTable", "workspaceId": workspace_id, "itemId": lakehouse_id,
-                "sourceSchema": schema, "sourceTableName": table_name_map.get(table, table)}
+                "sourceSchema": schema, "sourceTableName": name}
 
     add(".platform", {"$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
                       "metadata": {"type": "Ontology", "displayName": display_name},
@@ -90,6 +95,9 @@ def fabric_iq_definition(
     entity_ids: dict[str, int] = {}
     prop_ids: dict[tuple[str, str], int] = {}
     for table, d in g.nodes(data=True):
+        if not d.get("keys"):
+            skipped.append(table)
+            continue
         eid = _id64("entity", table)
         entity_ids[table] = eid
         props = []
@@ -123,6 +131,8 @@ def fabric_iq_definition(
         })
 
     for a, b, d in g.edges(data=True):
+        if a not in entity_ids or b not in entity_ids:
+            continue                                      # one end was skipped (no keys)
         field = d.get("field", "")
         rid = _id64("rel", a, b, field)
         add(f"RelationshipTypes/{rid}/definition.json", {
@@ -147,7 +157,10 @@ def fabric_iq_definition(
                                      for c, tk in zip(ref_cols, tgt_keys) if (b, tk.upper()) in prop_ids],
         })
 
-    return {"displayName": display_name, "type": "Ontology", "definition": {"parts": parts}}
+    env = {"displayName": display_name, "type": "Ontology", "definition": {"parts": parts}}
+    if skipped:
+        env["skipped"] = skipped                           # strip before POST; deploy() does
+    return env
 
 
 # ---- Graph database exports -------------------------------------------------------
