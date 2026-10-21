@@ -55,7 +55,7 @@ tables). Use a **sandbox workspace**: creating an Ontology item also creates a L
 GraphModel beside it.
 
 ```python
-%pip install git+https://github.com/Krusmaster/sap-ontology@sap-mirror-adapter pyyaml
+%pip install git+https://github.com/Krusmaster/sap-ontology
 ```
 
 ```python
@@ -86,9 +86,9 @@ Then open the Ontology item in the workspace and check that relationships are qu
 **Re-running updates the existing item** (same `displayName` → `updateDefinition`), so a second run
 creates no new Lakehouse or GraphModel; ids are deterministic, so entities keep their identity.
 
-*Status: verified on synthetic fixtures in Fabric; the inference rules were cross-checked against a
-live S/4 mirror's metadata (71 views: 52 edges, 0 ambiguous). This exact cell end-to-end, and
-`updateDefinition` on re-run, are the next sandbox tests.*
+*Status (v0.2): this cell ran end-to-end in a Fabric sandbox on synthetic fixtures, including the
+`updateDefinition` path on re-run. The inference rules were cross-checked against a live S/4
+mirror's metadata; the package itself has not run against a live mirror.*
 
 ## Two kinds of input
 
@@ -137,7 +137,7 @@ What the adapter does, and does not do:
   never the reverse, and **no reference edge ever targets a text view** — a master that carries
   `LANGUAGE` as a plain column does not point at other entities' texts. Multi-column keys are
   compared as sets. Edges to the language table itself are dropped by default
-  (`--include-text-key-edges` to keep them) — on a real S/4 mirror they were a quarter of all edges.
+  (`--include-text-key-edges` to keep them) — on a real S/4 mirror they were a large share of all edges.
   A text view whose master is not replicated (`I_PRODUCTDESCRIPTION` with no `I_PRODUCT`) is still
   a text view: it is never the source or the target of a reference edge.
 - **Entities without keys** (custom views with no `custom_keys`) are skipped from the ontology and
@@ -176,17 +176,18 @@ of creating a second one.
 
 ## Status
 
-v0.2 (branch). The Fabric IQ ontology item is in preview. The definition shape now follows one
+v0.2. The Fabric IQ ontology item is in preview. The definition shape now follows one
 that Fabric **accepted and returned via Get Item Definition** (October 2026): `entityIdParts`,
 namespace `usertypes` / `namespaceType Custom`, `dataBindingConfiguration` with
 `sourceTableProperties`, and a `Contextualizations/` file per relationship type mapping source
 keys and referencing columns. Without contextualizations, relationship types link nothing.
 **Verified 2026-10-21 on synthetic fixtures in a Fabric sandbox:** an Ontology item was created
-from this output — 11 entities (2- and 3-part keys accepted), 11 bindings, 9 relationship types
-with 9 contextualizations (a 3-column source key onto a 2-column target accepted). The inference
-rules were cross-checked against a live S/4 mirror's metadata; the package itself has not run
-against a live mirror yet. Two things the first attempts taught: ids must be JSON strings, and
-item names may not contain spaces.
+and then updated in place from this output — 11 entities (2- and 3-part keys accepted), 11
+bindings, 9 relationship types with 9 contextualizations (a 3-column source key onto a 2-column
+target accepted). The inference rules were cross-checked against a live S/4 mirror's metadata;
+the package itself has not run against a live mirror yet. Lessons from the failed attempts: ids
+must be JSON strings, item names may not contain spaces, and every contextualization must bind
+exactly one source column per target key part.
 
 ## Works on
 

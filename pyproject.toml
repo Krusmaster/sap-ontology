@@ -1,6 +1,6 @@
 [project]
 name = "sap-ontology"
-version = "0.1.0"
+version = "0.2.0"
 description = "SAP Data Dictionary -> graph -> Fabric IQ ontology, in one command"
 readme = "README.md"
 license = { text = "MIT" }
