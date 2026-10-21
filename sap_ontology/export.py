@@ -53,14 +53,23 @@ def fabric_iq_definition(
     workspace_id: str,
     lakehouse_id: str,
     schema: str = "dbo",
-    namespace: str = "sap",
+    namespace: str = "usertypes",
     table_name_map: dict[str, str] | None = None,
 ) -> dict:
     """Build the item-definition envelope for POST /v1/workspaces/{ws}/items.
 
-    Each SAP table becomes an entity type with its key fields as keys, bound to the mirrored
-    lakehouse table of the same name (override via table_name_map). Each DD08L foreign key
-    becomes a relationship type.
+    Shape follows a definition Fabric accepted and returned via Get Item Definition (2026-10):
+    - EntityTypes/<id>/definition.json: entityIdParts, namespace "usertypes", namespaceType "Custom",
+      visibility "Visible", baseEntityTypeId null, properties[], timeseriesProperties[]
+    - EntityTypes/<id>/DataBindings/<id>.json: {id, dataBindingConfiguration{dataBindingType,
+      propertyBindings[{sourceColumnName, targetPropertyId}], sourceTableProperties{sourceType,
+      workspaceId, itemId, sourceSchema, sourceTableName}}}
+    - RelationshipTypes/<id>/definition.json + Contextualizations/<id>.json: the mapping table is the
+      source entity's own table (its key columns -> source entity key, referencing column(s) ->
+      target entity key).
+
+    Table names are used as they are (mirrored SAP tables are upper case); override per table with
+    table_name_map. Each table becomes one entity type; each edge one relationship type.
     """
     table_name_map = table_name_map or {}
     parts: list[dict] = []
@@ -69,54 +78,73 @@ def fabric_iq_definition(
         payload = base64.b64encode(json.dumps(obj, separators=(",", ":")).encode()).decode()
         parts.append({"path": path, "payload": payload, "payloadType": "InlineBase64"})
 
+    def table_props(table: str) -> dict:
+        return {"sourceType": "LakehouseTable", "workspaceId": workspace_id, "itemId": lakehouse_id,
+                "sourceSchema": schema, "sourceTableName": table_name_map.get(table, table)}
+
     add(".platform", {"$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
                       "metadata": {"type": "Ontology", "displayName": display_name},
                       "config": {"version": "2.0", "logicalId": str(uuid.uuid5(uuid.NAMESPACE_URL, display_name))}})
     add("definition.json", {})
 
     entity_ids: dict[str, int] = {}
+    prop_ids: dict[tuple[str, str], int] = {}
     for table, d in g.nodes(data=True):
         eid = _id64("entity", table)
         entity_ids[table] = eid
         props = []
         for f in d.get("fields", []):
-            props.append({
-                "id": _id64("prop", table, f["FIELDNAME"]),
-                "name": f["FIELDNAME"],
-                "valueType": value_type(f.get("DATATYPE", "")),
-            })
-        keys = [p["id"] for p in props if p["name"] in set(d.get("keys", []))]
-        display_prop = keys[-1] if keys else (props[0]["id"] if props else None)
+            pid = _id64("prop", table, f["FIELDNAME"])
+            prop_ids[(table, f["FIELDNAME"].upper())] = pid
+            props.append({"id": pid, "name": f["FIELDNAME"], "valueType": value_type(f.get("DATATYPE", ""))})
+        key_ids = [prop_ids[(table, k.upper())] for k in d.get("keys", []) if (table, k.upper()) in prop_ids]
+        display_prop = key_ids[-1] if key_ids else (props[0]["id"] if props else None)
         add(f"EntityTypes/{eid}/definition.json", {
             "id": eid,
             "name": table,
             "namespace": namespace,
+            "namespaceType": "Custom",
+            "visibility": "Visible",
+            "baseEntityTypeId": None,
             "description": d.get("text", ""),
-            "keyPropertyIds": keys,
+            "entityIdParts": key_ids,
             "displayNamePropertyId": display_prop,
             "properties": props,
             "timeseriesProperties": [],
         })
-        add(f"EntityTypes/{eid}/DataBindings/{uuid.uuid5(uuid.NAMESPACE_URL, table)}.json", {
-            "dataBindingType": "NonTimeSeries",
-            "source": {
-                "type": "LakehouseTable",
-                "workspaceId": workspace_id,
-                "itemId": lakehouse_id,
-                "sourceSchema": schema,
-                "sourceTableName": table_name_map.get(table, table.lower()),
+        bid = _id64("binding", table)
+        add(f"EntityTypes/{eid}/DataBindings/{bid}.json", {
+            "id": bid,
+            "dataBindingConfiguration": {
+                "dataBindingType": "NonTimeSeries",
+                "propertyBindings": [{"sourceColumnName": p["name"], "targetPropertyId": p["id"]} for p in props],
+                "sourceTableProperties": table_props(table),
             },
-            "propertyBindings": [{"propertyId": p["id"], "sourceColumnName": p["name"]} for p in props],
         })
 
     for a, b, d in g.edges(data=True):
-        rid = _id64("rel", a, b, d.get("field", ""))
+        field = d.get("field", "")
+        rid = _id64("rel", a, b, field)
         add(f"RelationshipTypes/{rid}/definition.json", {
             "id": rid,
-            "name": f"{a}_{d.get('field', 'ref')}_{b}",
+            "name": f"{a}_{field.replace(',', '_') or 'ref'}_{b}",
             "namespace": namespace,
+            "namespaceType": "Custom",
             "source": {"entityTypeId": entity_ids[a]},
             "target": {"entityTypeId": entity_ids[b]},
+        })
+        # Contextualization: the source table maps its own key -> source entity, referencing col(s) -> target key
+        src_keys = g.nodes[a].get("keys", [])
+        tgt_keys = g.nodes[b].get("keys", [])
+        ref_cols = [c.strip() for c in field.split(",") if c.strip()] or tgt_keys
+        cid = _id64("ctx", a, b, field)
+        add(f"RelationshipTypes/{rid}/Contextualizations/{cid}.json", {
+            "id": cid,
+            "dataBindingTable": table_props(a),
+            "sourceKeyRefBindings": [{"sourceColumnName": k, "targetPropertyId": prop_ids[(a, k.upper())]}
+                                     for k in src_keys if (a, k.upper()) in prop_ids],
+            "targetKeyRefBindings": [{"sourceColumnName": c, "targetPropertyId": prop_ids[(b, tk.upper())]}
+                                     for c, tk in zip(ref_cols, tgt_keys) if (b, tk.upper()) in prop_ids],
         })
 
     return {"displayName": display_name, "type": "Ontology", "definition": {"parts": parts}}

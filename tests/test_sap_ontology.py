@@ -38,14 +38,22 @@ def test_fabric_iq_envelope():
     paths = [p["path"] for p in env["definition"]["parts"]]
     assert ".platform" in paths and "definition.json" in paths
     assert sum(p.startswith("EntityTypes/") and p.endswith("definition.json") for p in paths) == 8
-    assert sum(p.startswith("RelationshipTypes/") for p in paths) == 7
-    ent = next(json.loads(base64.b64decode(p["payload"])) for p in env["definition"]["parts"]
-               if p["path"].startswith("EntityTypes/") and p["path"].endswith("definition.json")
-               and json.loads(base64.b64decode(p["payload"]))["name"] == "VBAP")
+    assert sum(p.startswith("RelationshipTypes/") and p.endswith("definition.json") for p in paths) == 7
+    assert sum("/Contextualizations/" in p for p in paths) == 7
+    parts = {p["path"]: json.loads(base64.b64decode(p["payload"])) for p in env["definition"]["parts"]}
+    ent = next(o for k, o in parts.items() if k.startswith("EntityTypes/") and k.endswith("definition.json") and o["name"] == "VBAP")
     names = {p["name"]: p["valueType"] for p in ent["properties"]}
     assert names["KWMENG"] == "Double" and names["VBELN"] == "String"
-    assert len(ent["keyPropertyIds"]) == 2
-    assert all(i > 0 for i in ent["keyPropertyIds"])
+    assert len(ent["entityIdParts"]) == 2 and all(i > 0 for i in ent["entityIdParts"])
+    assert ent["namespace"] == "usertypes" and ent["namespaceType"] == "Custom" and ent["visibility"] == "Visible" and ent["baseEntityTypeId"] is None
+    binding = next(o for k, o in parts.items() if k.startswith(f"EntityTypes/{ent['id']}/DataBindings/"))
+    cfg = binding["dataBindingConfiguration"]
+    assert cfg["dataBindingType"] == "NonTimeSeries" and cfg["sourceTableProperties"]["sourceType"] == "LakehouseTable"
+    assert cfg["sourceTableProperties"]["sourceTableName"] == "VBAP"          # real name, not lower-cased
+    assert {b["sourceColumnName"] for b in cfg["propertyBindings"]} == set(names)
+    ctx = next(o for k, o in parts.items() if "/Contextualizations/" in k and o["dataBindingTable"]["sourceTableName"] == "VBAP")
+    assert ctx["sourceKeyRefBindings"][0]["sourceColumnName"] == "VBELN"
+    assert len(ctx["targetKeyRefBindings"]) == 1
 
 
 def test_ids_are_deterministic():

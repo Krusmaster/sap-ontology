@@ -103,4 +103,48 @@ def test_ontology_from_mirror_graph():
     h, _ = infer_edges(g, confirmed=yaml.safe_load((DD / "relationships.yaml").read_text()))
     env = fabric_iq_definition(h, "mirror test", "ws", "lh")
     paths = [p["path"] for p in env["definition"]["parts"]]
-    assert sum(p.startswith("RelationshipTypes/") for p in paths) == h.number_of_edges() >= 3
+    assert sum(p.startswith("RelationshipTypes/") and p.endswith("definition.json") for p in paths) == h.number_of_edges() >= 3
+    assert sum("/Contextualizations/" in p for p in paths) == h.number_of_edges()
+
+
+def _g(nodes):
+    """nodes: {table: (keys, extra_cols)} -> graph with fields."""
+    import networkx as nx
+    g = nx.DiGraph()
+    for t, (keys, extra) in nodes.items():
+        fields = [{"FIELDNAME": c, "POSITION": i, "KEYFLAG": "X" if c in keys else "", "DATATYPE": "CHAR", "LENG": 10, "DECIMALS": 0}
+                  for i, c in enumerate(list(keys) + list(extra), 1)]
+        g.add_node(t, text="", keys=list(keys), fields=fields)
+    return g
+
+
+def test_reference_in_composite_key_keeps_edge_and_is_not_an_item():
+    g = _g({
+        "I_PLANT": (["PLANT"], ["PLANTNAME"]),
+        "I_STORAGELOCATION": (["PLANT", "STORAGELOCATION"], []),
+        "I_PRODUCT": (["PRODUCT"], []),
+        "ZC_STOCK": (["PLANT", "STORAGELOCATION", "PRODUCT"], ["QUANTITY"]),
+    })
+    h, amb = infer_edges(g)
+    assert h.has_edge("ZC_STOCK", "I_PLANT")              # PLANT is a reference even though it leads ZC_STOCK's key
+    assert h.has_edge("ZC_STOCK", "I_PRODUCT")            # PRODUCT too — it is another table's key, not an item number
+    assert not h.has_edge("I_STORAGELOCATION", "I_PLANT")  # that one IS header/item -> business object, not a reference
+    assert amb == []
+    s = {x["object"]: x for x in suggest_business_objects(h)}
+    assert "ZC_STOCK" not in s.get("I_STORAGELOCATION", {}).get("items", [])   # PRODUCT is a reference, so not an item
+    assert s["I_PLANT"]["items"] == ["I_STORAGELOCATION"]                     # STORAGELOCATION is a real item number
+
+
+def test_multi_column_key_ambiguity_reported():
+    g = _g({"A": (["K1", "K2"], []), "B": (["K1", "K2"], ["X"]), "C": ([], ["K1", "K2", "Y"])})
+    h, amb = infer_edges(g)
+    assert amb and amb[0]["column"] == "K1,K2" and set(amb[0]["owners"]) == {"A", "B"}
+    assert h.number_of_edges() == 0
+
+
+def test_multi_column_keys_can_be_switched_off():
+    g = _g({"A": (["K1", "K2"], []), "C": (["Z"], ["K1", "K2"])})
+    h, _ = infer_edges(g, include_multi_column_keys=False)
+    assert h.number_of_edges() == 0
+    h, _ = infer_edges(g)
+    assert h.has_edge("C", "A")

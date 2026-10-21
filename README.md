@@ -106,9 +106,12 @@ duplicating it.
 
 ## Status
 
-v0.1. The Fabric IQ ontology item is in preview and documented by example only. Field names
-here follow Microsoft's ontology-authoring guidance; before trusting them, create one ontology by
-hand in your tenant, fetch it with *Get Item Definition*, and diff. Report mismatches as issues.
+v0.2 (branch). The Fabric IQ ontology item is in preview. The definition shape now follows one
+that Fabric **accepted and returned via Get Item Definition** (October 2026): `entityIdParts`,
+namespace `usertypes` / `namespaceType Custom`, `dataBindingConfiguration` with
+`sourceTableProperties`, and a `Contextualizations/` file per relationship type mapping source
+keys and referencing columns. Without contextualizations, relationship types link nothing.
+Creating the item from this output has not been run yet — that is the next sandbox test.
 
 ## Works on
 

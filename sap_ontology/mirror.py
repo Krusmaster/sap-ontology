@@ -160,18 +160,29 @@ def from_lakehouse(
     return from_dd03nd(dd, tables, spark_schemas=schemas, custom_keys=custom_keys, strip_suffix=strip_suffix, name_map=name_map)
 
 
+def is_item_of(b_keys: list[str], a_keys: list[str], other_single_keys: set[str]) -> bool:
+    """B is an item table of A when B's key = A's key + exactly one column, and that column is not
+    itself the single-column key of another table (then it is a reference, not an item number)."""
+    if len(b_keys) != len(a_keys) + 1 or b_keys[: len(a_keys)] != a_keys:
+        return False
+    return b_keys[-1] not in other_single_keys
+
+
 def infer_edges(
     g: nx.DiGraph,
     confirmed: list[dict] | None = None,
-    single_key_first: bool = True,
+    include_multi_column_keys: bool = True,
 ) -> tuple[nx.DiGraph, list[dict]]:
     """Derive relationships from key structure when no foreign-key catalogue exists.
 
-    Rule: table B -> table A when B carries ALL of A's key columns (by name, case-insensitive)
-    and A's key is not a prefix of B's own key (that is header/item, handled elsewhere).
-    Single-column keys are tried first; multi-column keys only when single_key_first=False or
-    after singles. Every inferred edge gets inferred=True and a reason. A column that is the
-    key of two or more tables is AMBIGUOUS: no edge, reported instead.
+    Rule: B -> A when B carries ALL of A's key columns (by name, case-insensitive).
+    Header/item pairs (B's key = A's key + one non-reference column) are NOT reference edges;
+    they are left to suggest_business_objects. A reference column that happens to be part of
+    B's key (PLANT in a (PLANT, STORAGELOCATION, PRODUCT) key) still yields an edge.
+
+    Single-column keys first, then multi-column keys if include_multi_column_keys. Every inferred
+    edge is marked inferred=True with a reason. A key (single or multi) owned by two or more
+    tables is AMBIGUOUS: no edge, reported instead.
 
     confirmed: list of {"from": B, "to": A, "field": col, "action": "confirm"|"override"|"add"|"drop"}
                from a relationships YAML. Applied after inference; "drop" removes an inferred edge.
@@ -180,35 +191,33 @@ def infer_edges(
     cols = {n: {f["FIELDNAME"].upper() for f in d.get("fields", [])} for n, d in g.nodes(data=True)}
     ambiguous: list[dict] = []
 
-    # who owns which single-column key?
-    owners: dict[str, list[str]] = {}
+    owners: dict[tuple[str, ...], list[str]] = {}
     for n, k in keys.items():
-        if len(k) == 1:
-            owners.setdefault(k[0], []).append(n)
+        if k:
+            owners.setdefault(tuple(k), []).append(n)
+    single_keys = {k[0] for k in owners if len(k) == 1}
 
     h = g.copy()
-    for col, tabs in owners.items():
+    ordered = sorted(owners.items(), key=lambda kv: len(kv[0]))
+    for key, tabs in ordered:
+        if len(key) > 1 and not include_multi_column_keys:
+            continue
         if len(tabs) > 1:
-            ambiguous.append({"column": col, "owners": sorted(tabs), "reason": "single-column key of several tables"})
+            ambiguous.append({"column": ",".join(key), "owners": sorted(tabs),
+                              "reason": f"{'single' if len(key) == 1 else 'multi'}-column key of several tables"})
             continue
         a = tabs[0]
+        ka = list(key)
         for b in g.nodes:
-            if b == a or col not in cols[b]:
+            if b == a or not set(ka) <= cols[b]:
                 continue
-            if keys[b][: len(keys[a])] == keys[a]:
-                continue                                  # header/item prefix — not a reference edge
-            h.add_edge(b, a, field=col, kind="INFERRED", inferred=True, reason=f"{b}.{col} = key of {a}")
-
-    if not single_key_first or True:                      # multi-column keys, after singles
-        for a, ka in keys.items():
-            if len(ka) < 2:
-                continue
-            for b in g.nodes:
-                if b == a or not set(ka) <= cols[b] or keys[b][: len(ka)] == ka:
-                    continue
-                if not h.has_edge(b, a):
-                    h.add_edge(b, a, field=",".join(ka), kind="INFERRED", inferred=True,
-                               reason=f"{b} carries full key of {a}")
+            if keys[b] == ka:
+                continue                                  # same key: 1:1 extension, not a reference
+            if is_item_of(keys[b], ka, single_keys - set(ka)):
+                continue                                  # header/item, handled elsewhere
+            if not h.has_edge(b, a):
+                h.add_edge(b, a, field=",".join(ka), kind="INFERRED", inferred=True,
+                           reason=f"{b} carries key of {a} ({','.join(ka)})")
 
     for c in confirmed or []:
         f, t = c["from"].upper(), c["to"].upper()
