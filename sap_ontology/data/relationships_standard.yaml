@@ -28,7 +28,7 @@
 - {from: I_PURCHASEORDERITEM,    to: I_STORAGELOCATION,       field: STORAGELOCATION,        action: add}
 - {from: I_PURCHASEREQUISITIONITEM, to: I_PRODUCT,            field: MATERIAL,               action: add}
 - {from: I_SUPPLIERINVOICE,      to: I_SUPPLIER,              field: INVOICINGPARTY,         action: add}
-# Inventory / logistics
+# Inventory
 - {from: I_MATERIALDOCUMENTITEM, to: I_PRODUCT,               field: MATERIAL,               action: add}
 - {from: I_MATERIALDOCUMENTITEM, to: I_PLANT,                 field: PLANT,                  action: add}
 - {from: I_MATERIALDOCUMENTITEM, to: I_STORAGELOCATION,       field: STORAGELOCATION,        action: add}
